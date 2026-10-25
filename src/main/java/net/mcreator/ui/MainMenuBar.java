@@ -52,7 +52,7 @@ public abstract class MainMenuBar extends JMenuBar {
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.current().getSecondAltBackgroundColor()));
 
 		if (!macOSscreenMenuBar) {
-			JMenu logo = new JMenu("MCreator");
+			JMenu logo = new JMenu("ModLab");
 			logo.setMnemonic('M');
 			logo.add(mcreator.getActionRegistry().mcreatorWebsite);
 			logo.add(mcreator.getActionRegistry().mcreatorCommunity);

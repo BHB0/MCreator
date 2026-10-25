@@ -22,6 +22,7 @@ import club.minnced.discord.rpc.DiscordEventHandlers;
 import club.minnced.discord.rpc.DiscordRPC;
 import club.minnced.discord.rpc.DiscordRichPresence;
 import com.sun.jna.Native;
+import net.mcreator.ModLabConfig;
 import net.mcreator.preferences.PreferencesManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -51,7 +52,7 @@ public class DiscordClient implements Closeable {
 			handlers.ready = (user) -> LOG.debug("Connected with {}", user.username);
 			handlers.disconnected = (errorCode, message) -> LOG.debug("Disconnected: {} - {}", errorCode, message);
 			handlers.errored = (errorCode, message) -> LOG.warn("Discord error: {} - {}", errorCode, message);
-			discordRpc.Discord_Initialize("712264497787568171", handlers, true, null);
+			discordRpc.Discord_Initialize(ModLabConfig.discordAppId(), handlers, true, null);
 			timer.schedule(new TimerTask() {
 				@Override public void run() {
 					discordRpc.Discord_RunCallbacks();
@@ -98,7 +99,8 @@ public class DiscordClient implements Closeable {
 	}
 
 	private boolean isDisabled() {
-		return !PreferencesManager.PREFERENCES.integrations.discordRichPresenceEnable.get();
+		return ModLabConfig.discordAppId().isEmpty()
+				|| !PreferencesManager.PREFERENCES.integrations.discordRichPresenceEnable.get();
 	}
 
 }

@@ -225,7 +225,7 @@ public final class MCreatorApplication {
 			// Do not externalize this text
 			discordClient.updatePresence("Just opened", "Version " + Launcher.version.getMajorString());
 
-			splashScreen.setProgress(100, "Loading MCreator windows");
+			splashScreen.setProgress(100, "Loading ModLab windows");
 
 			try {
 				if (Desktop.getDesktop().isSupported(Desktop.Action.APP_ABOUT))

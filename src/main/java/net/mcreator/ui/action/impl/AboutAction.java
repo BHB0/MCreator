@@ -60,9 +60,8 @@ public class AboutAction extends BasicAction {
 			versionString += " (MSIX)";
 		}
 
-		String latestMajorVersion = MCreatorApplication.isInternet ?
-				MCreatorApplication.WEB_API.getUpdateInfo().getLatestMajor() :
-				L10N.t("common.not_applicable");
+		// ModLab does not follow the MCreator release channel
+		String latestMajorVersion = L10N.t("common.not_applicable");
 
 		JLabel aboutLabel = L10N.label("dialog.about.message", Launcher.version.major, versionString,
 				latestMajorVersion, GeneratableElement.formatVersion, OS.getSystemBits(), OS.getArchitecture(),

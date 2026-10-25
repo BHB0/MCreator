@@ -38,7 +38,7 @@ import java.util.function.Consumer;
 
 public class SingleAppHandler implements Closeable {
 
-	private static final String APP_ID = "net.mcreator.MCreator";
+	private static final String APP_ID = "net.modlab.ModLab";
 
 	private static final Logger LOG = LogManager.getLogger(SingleAppHandler.class);
 

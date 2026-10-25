@@ -69,7 +69,7 @@ public class MCreatorNetWebAPI implements IWebAPI {
 				LOG.warn("Failed to fetch repository data from server");
 				return false;
 			}
-			updateInfo = new Gson().fromJson(appData, UpdateInfo.class);
+			updateInfo = UpdateInfo.empty(); // ModLab: updates are checked on GitHub by ModLabUpdater
 		} catch (Exception e) {
 			updateInfo = UpdateInfo.empty();
 			LOG.warn("Failed to parse update info", e);

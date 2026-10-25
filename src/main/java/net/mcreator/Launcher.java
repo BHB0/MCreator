@@ -82,8 +82,8 @@ public class Launcher {
 
 		// check if proper version of MCreator per architecture is used
 		if (OS.getSystemBits() == OS.BIT32) {
-			JOptionPane.showMessageDialog(null, "<html>You are trying to run 64-bit MCreator on 32-bit computer.<br>"
-					+ "MCreator no longer supports 32-bit platforms.", "MCreator error", JOptionPane.WARNING_MESSAGE);
+			JOptionPane.showMessageDialog(null, "<html>You are trying to run 64-bit ModLab on 32-bit computer.<br>"
+					+ "ModLab no longer supports 32-bit platforms.", "ModLab error", JOptionPane.WARNING_MESSAGE);
 			System.exit(-1);
 		}
 
@@ -93,10 +93,10 @@ public class Launcher {
 		WindowsPackage.initIfWindows();
 
 		if (!UserFolderManager.createUserFolderIfNotExists()) {
-			JOptionPane.showMessageDialog(null, "<html><b>MCreator failed to write to user directory!</b><br><br>"
-							+ "Make sure that the user running MCreator has permissions to read and write to the directory<br>"
-							+ "in which MCreator tried to create user specific data storage. The path MCreator could not write to is:<br><br>"
-							+ UserFolderManager.getFileFromUserFolder("/") + "<br>", "MCreator file system error",
+			JOptionPane.showMessageDialog(null, "<html><b>ModLab failed to write to user directory!</b><br><br>"
+							+ "Make sure that the user running ModLab has permissions to read and write to the directory<br>"
+							+ "in which ModLab tried to create user specific data storage. The path ModLab could not write to is:<br><br>"
+							+ UserFolderManager.getFileFromUserFolder("/") + "<br>", "ModLab file system error",
 					JOptionPane.WARNING_MESSAGE);
 			System.exit(-2);
 		}

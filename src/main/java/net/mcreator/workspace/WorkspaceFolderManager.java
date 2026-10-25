@@ -58,10 +58,10 @@ public final class WorkspaceFolderManager {
 	}
 
 	public static File getSuggestedWorkspaceFoldersRoot() {
-		File workspacesFolder = new File(System.getProperty("user.home"), "MCreatorWorkspaces");
+		File workspacesFolder = new File(System.getProperty("user.home"), "ModLabWorkspaces");
 		if (!workspacesFolder.getAbsolutePath().matches("[a-zA-Z0-9_/+\\-\\\\:()\\[\\].,@$=`' ]+")) {
 			if (OS.getOS() == OS.WINDOWS)
-				workspacesFolder = new File("C:/", "MCreatorWorkspaces");
+				workspacesFolder = new File("C:/", "ModLabWorkspaces");
 		}
 		return workspacesFolder;
 	}

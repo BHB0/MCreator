@@ -24,11 +24,11 @@ import java.nio.file.Files;
 public class UserFolderManager {
 
 	private static File getUserFolder() {
-		if (System.getenv("MCREATOR_HOME") != null) {
-			return new File(System.getenv("MCREATOR_HOME"));
+		if (System.getenv("MODLAB_HOME") != null) {
+			return new File(System.getenv("MODLAB_HOME"));
 		}
 
-		return new File(System.getProperty("user.home") + "/.mcreator/");
+		return new File(System.getProperty("user.home") + "/.modlab/");
 	}
 
 	public static boolean createUserFolderIfNotExists() {

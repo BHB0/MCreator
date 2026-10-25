@@ -35,7 +35,7 @@ public class IntegrationsSection extends PreferencesSection {
 		super(preferencesIdentifier);
 
 		discordRichPresenceEnable = addEntry(new BooleanEntry("discordRichPresenceEnable", true));
-		googleAnalyticsEnable = addEntry(new BooleanEntry("googleAnalyticsEnable", true));
+		googleAnalyticsEnable = addEntry(new BooleanEntry("googleAnalyticsEnable", false));
 		mcpEnable = addEntry(new BooleanEntry("mcpEnable", false));
 		mcpPort = addEntry(new IntegerEntry("mcpPort", 3025, 1024, 60000));
 	}

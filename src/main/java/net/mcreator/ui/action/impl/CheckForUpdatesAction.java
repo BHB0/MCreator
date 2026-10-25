@@ -20,12 +20,12 @@ package net.mcreator.ui.action.impl;
 
 import net.mcreator.ui.action.ActionRegistry;
 import net.mcreator.ui.action.BasicAction;
-import net.mcreator.ui.dialogs.UpdateNotifyDialog;
+import net.mcreator.io.net.api.update.ModLabUpdater;
 import net.mcreator.ui.init.L10N;
 
 public class CheckForUpdatesAction extends BasicAction {
 	public CheckForUpdatesAction(ActionRegistry actionRegistry) {
 		super(actionRegistry, L10N.t("action.check_for_updates"),
-				e -> UpdateNotifyDialog.showUpdateDialogIfUpdateExists(actionRegistry.getMCreator(), true, true, true));
+				e -> ModLabUpdater.checkInteractive(actionRegistry.getMCreator()));
 	}
 }

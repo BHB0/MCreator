@@ -23,7 +23,7 @@ import net.mcreator.Launcher;
 import net.mcreator.io.OS;
 import net.mcreator.io.UserFolderManager;
 import net.mcreator.io.WindowsDefenderUtil;
-import net.mcreator.io.net.api.update.UpdateInfo;
+import net.mcreator.io.net.api.update.ModLabUpdater;
 import net.mcreator.plugin.PluginLoadFailure;
 import net.mcreator.plugin.PluginLoader;
 import net.mcreator.plugin.PluginUpdateInfo;
@@ -104,38 +104,8 @@ public class StartupNotifications {
 	}
 
 	private static <T extends Window & INotificationConsumer> void handleUpdatesCore(T parent) {
-		UpdateInfo updateInfo = MCreatorApplication.WEB_API.getUpdateInfo();
-		if (MCreatorApplication.isInternet && updateInfo != null) {
-			if (updateInfo.isNewUpdateAvailable()) {
-				if (PreferencesManager.PREFERENCES.notifications.checkAndNotifyForUpdates.get()
-						|| Launcher.version.isSnapshot()) {
-					UpdateNotifyDialog.showUpdateDialogIfUpdateExists(parent, true, false, false);
-				} else {
-					parent.addNotification(UIRES.get("18px.info"),
-							L10N.t("notification.update_available.msg", Launcher.version.major,
-									updateInfo.getLatestMajor()),
-							new NotificationsRenderer.ActionButton(L10N.t("notification.common.more_info"),
-									e -> UpdateNotifyDialog.showUpdateDialogIfUpdateExists(parent, true, false, false)),
-							new NotificationsRenderer.ActionButton(L10N.t("dialog.update_notify.open_download_page"),
-									e -> DesktopUtils.browseSafe(
-											MCreatorApplication.SERVER_DOMAIN + "/download#update")));
-				}
-			} else if (updateInfo.isNewPatchAvailable()) {
-				if (PreferencesManager.PREFERENCES.notifications.checkAndNotifyForPatches.get()
-						|| Launcher.version.isSnapshot()) {
-					UpdateNotifyDialog.showUpdateDialogIfUpdateExists(parent, false, true, false);
-				} else {
-					parent.addNotification(UIRES.get("18px.info"),
-							L10N.t("notification.patch_available.msg", Launcher.version.major, Launcher.version.build,
-									updateInfo.getLatestPatchVersion()),
-							new NotificationsRenderer.ActionButton(L10N.t("notification.common.more_info"),
-									e -> UpdateNotifyDialog.showUpdateDialogIfUpdateExists(parent, false, true, false)),
-							new NotificationsRenderer.ActionButton(L10N.t("dialog.update_notify.open_download_page"),
-									e -> DesktopUtils.browseSafe(
-											MCreatorApplication.SERVER_DOMAIN + "/download#updatebuild")));
-				}
-			}
-		}
+		// ModLab: updates are looked up in the releases of the ModLab GitHub repository
+		ModLabUpdater.checkOnStartup(parent);
 	}
 
 	private static <T extends Window & INotificationConsumer> void handleUpdatesPlugin(T parent) {
