@@ -130,11 +130,59 @@ public class Theme {
 		}
 
 		if (!disableMCreatorOverrides) {
-			overrides.put("Button.arc", "0");
-			overrides.put("Component.arc", "0");
-			overrides.put("CheckBox.arc", "0");
-			overrides.put("Spinner.arc", "0");
-			overrides.put("ProgressBar.arc", "0");
+			// ModLab modern look: rounded corners, thin rounded scroll bars, density presets
+			boolean rounded = !"Square".equals(PreferencesManager.PREFERENCES.ui.interfaceCornerStyle.get());
+			String arc = rounded ? "10" : "0";
+			overrides.put("Button.arc", arc);
+			overrides.put("Component.arc", arc);
+			overrides.put("TextComponent.arc", arc);
+			overrides.put("CheckBox.arc", rounded ? "6" : "0");
+			overrides.put("Spinner.arc", arc);
+			overrides.put("ProgressBar.arc", rounded ? "999" : "0");
+
+			if (rounded) {
+				overrides.put("ScrollBar.thumbArc", "999");
+				overrides.put("ScrollBar.trackArc", "999");
+				overrides.put("ScrollBar.thumbInsets", "2,2,2,2");
+				overrides.put("ScrollBar.width", "12");
+				overrides.put("PopupMenu.borderCornerRadius", "8");
+				overrides.put("MenuItem.selectionArc", "8");
+				overrides.put("List.selectionArc", "8");
+				overrides.put("Tree.selectionArc", "8");
+				overrides.put("TabbedPane.tabArc", "10");
+				overrides.put("TabbedPane.tabSelectionArc", "10");
+				overrides.put("TabbedPane.closeArc", "999");
+			}
+
+			// Cleaner tabs
+			overrides.put("TabbedPane.showTabSeparators", "false");
+			overrides.put("TabbedPane.closeHoverBackground", "#FF057E40");
+			overrides.put("TabbedPane.closePressedBackground", "#FF057E80");
+			overrides.put("TabbedPane.closeHoverForeground", "@foreground");
+
+			switch (PreferencesManager.PREFERENCES.ui.interfaceDensity.get()) {
+			case "Compact" -> {
+				overrides.put("Button.margin", "1,10,1,10");
+				overrides.put("TabbedPane.tabInsets", "3,8,3,8");
+				overrides.put("MenuItem.margin", "1,8,1,8");
+				overrides.put("TextField.margin", "0,5,0,5");
+				overrides.put("ComboBox.padding", "0,5,0,5");
+			}
+			case "Comfortable" -> {
+				overrides.put("Button.margin", "5,20,5,20");
+				overrides.put("TabbedPane.tabInsets", "7,18,7,18");
+				overrides.put("MenuItem.margin", "5,14,5,14");
+				overrides.put("TextField.margin", "4,9,4,9");
+				overrides.put("ComboBox.padding", "4,9,4,9");
+			}
+			default -> {
+				overrides.put("Button.margin", "3,16,3,16");
+				overrides.put("TabbedPane.tabInsets", "5,14,5,14");
+				overrides.put("MenuItem.margin", "3,12,3,12");
+				overrides.put("TextField.margin", "2,7,2,7");
+				overrides.put("ComboBox.padding", "2,7,2,7");
+			}
+			}
 
 			overrides.put("Component.focusWidth", "0");
 			overrides.put("Component.innerFocusWidth", "0");

@@ -24,6 +24,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.Strictness;
 import net.mcreator.Launcher;
+import net.mcreator.ModLabConfig;
 import net.mcreator.io.FileIO;
 import net.mcreator.io.OS;
 import net.mcreator.io.UserFolderManager;
@@ -36,7 +37,6 @@ import net.mcreator.ui.SplashScreen;
 import net.mcreator.ui.action.impl.AboutAction;
 import net.mcreator.ui.component.ImagePanel;
 import net.mcreator.ui.component.JEmptyBox;
-import net.mcreator.ui.component.SocialButtons;
 import net.mcreator.ui.component.util.ComponentUtils;
 import net.mcreator.ui.component.util.PanelUtils;
 import net.mcreator.ui.dialogs.file.FileDialogs;
@@ -135,16 +135,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 
 		JPanel logoPanel = new JPanel(new BorderLayout(5, 5));
 		JLabel logo = new JLabel(UIRES.SVG.getBuiltIn("logo", 250, (int) (250 * (63 / 350.0))));
-		logo.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		logo.addMouseListener(new MouseAdapter() {
-			@Override public void mouseClicked(MouseEvent mouseEvent) {
-				DesktopUtils.browseSafe(MCreatorApplication.SERVER_DOMAIN);
-			}
-		});
 		logoPanel.add("North", logo);
-
-		SocialButtons socialButtons = new SocialButtons();
-		logoPanel.add("Center", PanelUtils.centerInPanel(socialButtons));
 
 		logoPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
 
@@ -548,100 +539,13 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 	}
 
 	private void initWebsitePanel() {
-		CompletableFuture<String[]> newsFuture = new CompletableFuture<>();
-		MCreatorApplication.WEB_API.getWebsiteNews(newsFuture);
-		JLabel nov = new JLabel("<html><font style=\"font-size: 9px;\">" + L10N.t("dialog.workspace_selector.news")
-				+ "<br></font><font style=\"font-size: 15px; color: #f5f5f5;\">" + L10N.t(
-				"dialog.workspace_selector.webdata.loading"));
-		nov.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		nov.setForeground(new Color(0xf5f5f5));
-		newsFuture.whenComplete((news, _) -> {
-			SwingUtilities.invokeLater(() -> {
-				if (news != null) {
-					nov.setText("<html><font style=\"font-size: 9px;\">" + L10N.t("dialog.workspace_selector.news")
-							+ "<br></font><font style=\"font-size: 15px; color: #f5f5f5;\">"
-							+ StringUtils.abbreviateString(news[0], 39));
-					nov.addMouseListener(new MouseAdapter() {
-						@Override public void mouseClicked(MouseEvent en) {
-							DesktopUtils.browseSafe(news[1]);
-						}
-					});
-				} else {
-					nov.setText("");
-				}
-			});
-
-			if (news != null && PreferencesManager.PREFERENCES.notifications.showWebsiteNewsNotifications.get()) {
-				String id = news[4];
-
-				// Do not show notification the first time
-				if (PreferencesManager.PREFERENCES.hidden.lastWebsiteNewsRead.get().isBlank())
-					PreferencesManager.PREFERENCES.hidden.lastWebsiteNewsRead.set(id);
-
-				if (!PreferencesManager.PREFERENCES.hidden.lastWebsiteNewsRead.get().equals(id)) {
-					ImageIcon newsIcon;
-					if (news[3] != null && !news[3].isBlank()) {
-						newsIcon = WebIO.getIconFromURL(MCreatorApplication.SERVER_DOMAIN + news[3], 3 * 60, 60, null);
-					} else {
-						newsIcon = null;
-					}
-
-					SwingUtilities.invokeLater(() -> {
-						String title = L10N.t("notification.news.title", news[0]);
-						String link = news[1];
-						String description = StringUtils.justifyText(StringUtils.abbreviateString(news[2], 300), 50,
-								"<br>");
-						addNotification(title, newsIcon, description,
-								new NotificationsRenderer.ActionButton(L10N.t("notification.news.read_more"), _ -> {
-									DesktopUtils.browseSafe(link);
-									PreferencesManager.PREFERENCES.hidden.lastWebsiteNewsRead.set(id);
-								}), new NotificationsRenderer.ActionButton(L10N.t("notification.news.hide"),
-										_ -> PreferencesManager.PREFERENCES.hidden.lastWebsiteNewsRead.set(id)));
-
-					});
-				}
-			}
-		});
-
-		CompletableFuture<String[]> motwFuture = new CompletableFuture<>();
-		MCreatorApplication.WEB_API.getModOfTheWeekData(motwFuture);
-		JLabel lab3 = new JLabel("<html><font style=\"font-size: 9px;\">" + L10N.t("dialog.workspace_selector.motw")
-				+ "<br></font><font style=\"font-size: 15px; color: #f5f5f5;\">" + L10N.t(
-				"dialog.workspace_selector.webdata.loading"));
-		lab3.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
-		lab3.setForeground(new Color(0xf5f5f5));
-		JLabel lab2 = new JLabel();
-		lab2.setIcon(new EmptyIcon(48, 48));
-		JComponent motwpan = PanelUtils.westAndEastElement(lab3, lab2);
-		motwpan.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		motwFuture.whenComplete((motw, _) -> {
-			ImageIcon imageIcon;
-			if (motw != null)
-				imageIcon = WebIO.getIconFromURL(motw[4], 48, 48, null, true);
-			else {
-				imageIcon = null;
-			}
-
-			SwingUtilities.invokeLater(() -> {
-				motwpan.addMouseListener(new MouseAdapter() {
-					@Override public void mouseClicked(MouseEvent arg0) {
-						if (motw != null)
-							DesktopUtils.browseSafe(motw[1]);
-					}
-				});
-				if (motw != null) {
-					lab3.setText("<html><font style=\"font-size: 9px;\">" + L10N.t("dialog.workspace_selector.motw")
-							+ "<br></font><font style=\"font-size: 15px; color: #f5f5f5;\">"
-							+ StringUtils.abbreviateString(motw[0], 30) + "&nbsp;&nbsp;&nbsp;&nbsp;");
-					lab2.setIcon(imageIcon);
-				} else {
-					lab3.setText("");
-				}
-			});
-		});
-
-		JComponent south = PanelUtils.westAndEastElement(nov, motwpan, 20, 20);
-		south.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+		// ModLab: no news or mod of the week from mcreator.net, only the version is shown
+		JLabel info = new JLabel("<html><font style=\"font-size: 15px; color: #f5f5f5;\">ModLab</font>&nbsp;&nbsp;"
+				+ "<font style=\"font-size: 11px; color: #c2c2c2;\">" + ModLabConfig.version() + "</font>");
+		JPanel south = new JPanel(new BorderLayout());
+		south.setOpaque(false);
+		south.add("West", info);
+		south.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 10));
 
 		JPanel soim;
 		if (!Launcher.version.isSnapshot()) {

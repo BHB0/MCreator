@@ -106,7 +106,8 @@ public class ModLabUpdater {
 			if (result.success() && result.updateAvailable()) {
 				Release release = result.release();
 				ThreadUtil.runOnSwingThread(() -> parent.addNotification(UIRES.get("18px.info"),
-						L10N.t("notification.modlab_update.msg", release.version(), ModLabConfig.version()),
+						L10N.t("notification.modlab_update.msg", "V" + release.version(),
+						"V" + ModLabConfig.version()),
 						new NotificationsRenderer.ActionButton(L10N.t("dialog.update_notify.open_download_page"),
 								e -> DesktopUtils.browseSafe(release.url()))));
 			}
@@ -130,7 +131,8 @@ public class ModLabUpdater {
 					Object[] options = { L10N.t("dialog.update_notify.open_download_page"),
 							L10N.t("dialog.update_notify.remind_later") };
 					int option = JOptionPane.showOptionDialog(parent,
-							L10N.label("dialog.modlab_update.message", release.version(), ModLabConfig.version()),
+							L10N.label("dialog.modlab_update.message", "V" + release.version(),
+							"V" + ModLabConfig.version()),
 							L10N.t("dialog.update_notify.update_title"), JOptionPane.YES_NO_CANCEL_OPTION,
 							JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
 					if (option == 0)

@@ -18,6 +18,7 @@
 
 package net.mcreator.ui.action.impl;
 
+import net.mcreator.ModLabConfig;
 import net.mcreator.Launcher;
 import net.mcreator.element.GeneratableElement;
 import net.mcreator.io.FileIO;
@@ -63,7 +64,7 @@ public class AboutAction extends BasicAction {
 		// ModLab does not follow the MCreator release channel
 		String latestMajorVersion = L10N.t("common.not_applicable");
 
-		JLabel aboutLabel = L10N.label("dialog.about.message", Launcher.version.major, versionString,
+		JLabel aboutLabel = L10N.label("dialog.about.message", "V" + ModLabConfig.version(), versionString,
 				latestMajorVersion, GeneratableElement.formatVersion, OS.getSystemBits(), OS.getArchitecture(),
 				OS.getBundledJVMBits());
 

@@ -18,6 +18,7 @@
 
 package net.mcreator.ui;
 
+import net.mcreator.ModLabConfig;
 import net.mcreator.Launcher;
 import net.mcreator.io.OS;
 import net.mcreator.ui.component.ProgressBar;
@@ -61,7 +62,7 @@ public class SplashScreen extends JWindow {
 		imagePanel.add(logo);
 
 		JLabel version = new JLabel(
-				"VERSION " + (Launcher.version != null ? Launcher.version.getMajorString() : "1234.5"));
+				"V" + ModLabConfig.version());
 		version.setFont(splashFont.deriveFont(18f));
 		version.setForeground(Color.white);
 		version.setBounds(shadowPadding + 30 + 10 - 4, shadowPadding + 129, 500, 45);

@@ -18,6 +18,7 @@
 
 package net.mcreator.ui;
 
+import net.mcreator.ModLabConfig;
 import net.mcreator.Launcher;
 import net.mcreator.ui.ide.CodeEditorView;
 import net.mcreator.ui.modgui.ModElementGUI;
@@ -50,7 +51,7 @@ public class WindowTitleHelper {
 			}
 		}
 
-		return title.append(" - ModLab ").append(Launcher.version.getMajorString()).toString();
+		return title.append(" - ModLab ").append("V").append(ModLabConfig.version()).toString();
 	}
 
 }
