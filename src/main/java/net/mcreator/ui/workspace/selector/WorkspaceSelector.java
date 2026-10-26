@@ -97,7 +97,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 		this.workspaceOpenListener = workspaceOpenListener;
 		this.application = application;
 
-		setTitle("ModLab " + Launcher.version.getMajorString());
+		setTitle("ModLab V" + ModLabConfig.version());
 		setIconImages(AppIcon.getAppIcons());
 		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
@@ -174,7 +174,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 		JPanel southcenterleft = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
 		JLabel version = L10N.label("dialog.workspace_selector.version",
-				Launcher.version.isSnapshot() ? Launcher.version.getMajorString() : Launcher.version.getFullString());
+				"V" + ModLabConfig.version());
 		version.addMouseListener(new MouseAdapter() {
 			@Override public void mouseClicked(MouseEvent mouseEvent) {
 				AboutAction.showDialog(WorkspaceSelector.this);
@@ -199,7 +199,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 		add("Center", centerComponent);
 
 		recentPanel.setBackground(Theme.current().getSecondAltBackgroundColor());
-		recentPanel.setPreferredSize(new Dimension(225, 10));
+		recentPanel.setPreferredSize(new Dimension(280, 10));
 
 		JLabel norecentsloaded = L10N.label("dialog.workspace_selector.no_workspaces_loaded");
 		norecentsloaded.setForeground(Theme.current().getAltForegroundColor());
@@ -253,6 +253,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 			}
 		});
 		recentsList.setCellRenderer(new RecentWorkspacesRenderer());
+		recentsList.setFixedCellHeight(68);
 		JScrollPane recentsScrollPane = new JScrollPane(recentsList);
 		recentsScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
@@ -299,7 +300,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 			}
 		});
 
-		setSize(795, 460);
+		setSize(850, 500);
 		setResizable(false);
 		setLocationRelativeTo(null);
 
@@ -504,8 +505,12 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 	private JButton mainWorkspaceButton(String text, ImageIcon icon, ActionListener event) {
 		JButton newWorkspace = new JButton(text);
 		ComponentUtils.deriveFont(newWorkspace, 13);
-		newWorkspace.setBackground(Theme.current().getBackgroundColor());
-		newWorkspace.setPreferredSize(new Dimension(240, 48));
+		// ModLab: the main button uses the accent color of the interface
+		Color accent = Theme.current().getInterfaceAccentColor();
+		double luminance = (0.299 * accent.getRed() + 0.587 * accent.getGreen() + 0.114 * accent.getBlue()) / 255;
+		newWorkspace.setBackground(accent);
+		newWorkspace.setForeground(luminance > 0.6 ? Color.BLACK : Color.WHITE);
+		newWorkspace.setPreferredSize(new Dimension(240, 52));
 		newWorkspace.setIcon(icon);
 		newWorkspace.addActionListener(event);
 		newWorkspace.setVerticalTextPosition(SwingConstants.CENTER);

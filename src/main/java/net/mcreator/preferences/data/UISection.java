@@ -36,6 +36,7 @@ public class UISection extends PreferencesSection {
 	public final ColorEntry interfaceAccentColor;
 	public final StringEntry interfaceDensity;
 	public final StringEntry interfaceCornerStyle;
+	public final BooleanEntry tabsDragReorder;
 	public final StringEntry backgroundSource;
 	public final BooleanEntry usemacOSMenuBar;
 	public final BooleanEntry nativeFileChooser;
@@ -50,6 +51,7 @@ public class UISection extends PreferencesSection {
 		interfaceAccentColor = addEntry(new ColorEntry("interfaceAccentColor", ColorScheme.MAIN_TINT_DEFAULT));
 		interfaceDensity = addEntry(new StringEntry("interfaceDensity", "Standard", "Compact", "Standard", "Comfortable"));
 		interfaceCornerStyle = addEntry(new StringEntry("interfaceCornerStyle", "Rounded", "Rounded", "Square"));
+		tabsDragReorder = addEntry(new BooleanEntry("tabsDragReorder", true));
 		backgroundSource = addEntry(
 				new StringEntry("backgroundSource", "All", "All", "Current theme", "Custom", "None"));
 		usemacOSMenuBar = addEntry(new BooleanEntry("useMacOSMenuBar", true));

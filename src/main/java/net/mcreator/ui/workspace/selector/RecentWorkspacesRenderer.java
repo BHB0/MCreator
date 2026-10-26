@@ -27,30 +27,25 @@ import net.mcreator.util.image.ImageUtils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.util.Objects;
 
+/**
+ * Renders a recent workspace as a rounded card (ModLab home page)
+ */
 class RecentWorkspacesRenderer extends JPanel implements ListCellRenderer<RecentWorkspaceEntry> {
 
 	private String version = null;
 	private boolean isSelected = false;
-
-	private final Font rotatedFont;
 
 	private final JLabel nameLabel = new JLabel();
 	private final JLabel pathLabel = new JLabel();
 	private final JLabel iconLabel = new JLabel();
 
 	RecentWorkspacesRenderer() {
-		super(new BorderLayout(7, 0));
+		super(new BorderLayout(12, 0));
+		setOpaque(false);
 
-		AffineTransform affineTransform = new AffineTransform();
-		affineTransform.rotate(Math.toRadians(-90), 0, 0);
-		rotatedFont = getFont().deriveFont(11.0f).deriveFont(affineTransform);
-
-		setBackground(Theme.current().getSecondAltBackgroundColor());
-
-		nameLabel.setFont(getFont().deriveFont(20.0f));
+		nameLabel.setFont(getFont().deriveFont(Font.BOLD, 15.0f));
 		pathLabel.setFont(getFont().deriveFont(11.0f));
 
 		add("West", iconLabel);
@@ -65,46 +60,58 @@ class RecentWorkspacesRenderer extends JPanel implements ListCellRenderer<Recent
 
 		String path = value.getPath().getParentFile().getAbsolutePath().replace("\\", "/");
 
-		nameLabel.setForeground(
-				isSelected ? Theme.current().getInterfaceAccentColor() : Theme.current().getAltForegroundColor());
-		pathLabel.setForeground(nameLabel.getForeground());
+		Color accent = Theme.current().getInterfaceAccentColor();
+		nameLabel.setForeground(isSelected ? accent : Theme.current().getForegroundColor());
+		pathLabel.setForeground(Theme.current().getAltForegroundColor());
 
 		setToolTipText(L10N.t("dialog.workspace_selector.recent_workspace", value.getName(), path,
 				Objects.requireNonNullElse(value.getMCRVersion(), L10N.t("common.not_applicable"))));
-		setBorder(BorderFactory.createEmptyBorder(2, version != null ? 23 : 5, 3, 0));
+		setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 16));
 
 		if (value.getType() != GeneratorFlavor.UNKNOWN) {
 			ImageIcon icon = new ImageIcon(
 					ImageUtils.darken(ImageUtils.toBufferedImage(value.getType().getIcon().getImage())));
 
-			iconLabel.setIcon(
-					isSelected ? ImageUtils.colorize(icon, Theme.current().getInterfaceAccentColor(), false) : icon);
-			nameLabel.setText(StringUtils.abbreviateString(value.getName(), 17));
-			pathLabel.setText(StringUtils.abbreviateStringInverse(path, 26));
+			iconLabel.setIcon(isSelected ? ImageUtils.colorize(icon, accent, false) : icon);
+			nameLabel.setText(StringUtils.abbreviateString(value.getName(), 18));
+			pathLabel.setText(StringUtils.abbreviateStringInverse(path, 30));
 		} else {
 			iconLabel.setIcon(null);
-			nameLabel.setText(StringUtils.abbreviateString(value.getName(), 19));
-			pathLabel.setText(StringUtils.abbreviateStringInverse(path, 34));
+			nameLabel.setText(StringUtils.abbreviateString(value.getName(), 21));
+			pathLabel.setText(StringUtils.abbreviateStringInverse(path, 36));
 		}
 
 		return this;
 	}
 
 	@Override protected void paintComponent(Graphics g) {
-		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D) g.create();
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+		Color accent = Theme.current().getInterfaceAccentColor();
+		int x = 8, y = 4, w = getWidth() - 16, h = getHeight() - 8;
+
+		g2.setColor(isSelected ?
+				new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 45) :
+				Theme.current().getAltBackgroundColor());
+		g2.fillRoundRect(x, y, w, h, 14, 14);
+
+		if (isSelected) {
+			g2.setColor(accent);
+			g2.setStroke(new BasicStroke(1.5f));
+			g2.drawRoundRect(x, y, w - 1, h - 1, 14, 14);
+		}
 
 		if (version != null) {
-			Graphics2D g2 = (Graphics2D) g;
-
-			g2.setColor(
-					isSelected ? Theme.current().getInterfaceAccentColor() : Theme.current().getAltForegroundColor());
-
-			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
 			String[] parts = version.split("\\.");
-			g2.setFont(rotatedFont);
-			g2.drawString(parts[0] + "." + parts[1], 15, 40);
+			String shortVersion = parts.length > 1 ? parts[0] + "." + parts[1] : version;
+			g2.setFont(getFont().deriveFont(10.0f));
+			g2.setColor(isSelected ? accent : Theme.current().getAltForegroundColor());
+			g2.drawString(shortVersion, x + w - g2.getFontMetrics().stringWidth(shortVersion) - 10, y + 16);
 		}
+
+		g2.dispose();
+		super.paintComponent(g);
 	}
 
 }

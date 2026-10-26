@@ -19,7 +19,9 @@
 package net.mcreator.ui;
 
 import net.mcreator.plugin.MCREvent;
+import net.mcreator.preferences.PreferencesManager;
 import net.mcreator.plugin.events.ui.TabEvent;
+import net.mcreator.ui.init.L10N;
 import net.mcreator.ui.laf.OpaqueTabStripTabbedPaneUI;
 import net.mcreator.ui.views.ViewBase;
 import net.mcreator.util.image.EmptyIcon;
@@ -28,8 +30,10 @@ import net.mcreator.util.image.ImageUtils;
 
 import javax.annotation.Nullable;
 import javax.swing.*;
+import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +46,10 @@ public class MCreatorTabs extends JTabbedPane {
 
 	private final List<Tab> tabs = new ArrayList<>();
 	private Tab current;
+
+	// ModLab: tab reordering and pinning
+	private boolean reordering = false;
+	private int dragTabIndex = -1;
 
 	MCreatorTabs() {
 		putClientProperty("JTabbedPane.tabCloseCallback", (IntConsumer) tabIndex -> {
@@ -56,6 +64,9 @@ public class MCreatorTabs extends JTabbedPane {
 		setFocusable(true);
 
 		addChangeListener(_ -> {
+			if (reordering)
+				return;
+
 			int selectedIndex = getSelectedIndex();
 			if (selectedIndex >= 0) {
 				Tab toNotifyOfShow = getTabForTabIndex(selectedIndex);
@@ -68,7 +79,17 @@ public class MCreatorTabs extends JTabbedPane {
 		});
 
 		addMouseListener(new MouseAdapter() {
+			@Override public void mousePressed(MouseEvent e) {
+				dragTabIndex = SwingUtilities.isLeftMouseButton(e) ? indexAtLocation(e.getX(), e.getY()) : -1;
+				showTabPopup(e);
+			}
+
 			@Override public void mouseReleased(MouseEvent e) {
+				dragTabIndex = -1;
+
+				if (showTabPopup(e))
+					return;
+
 				int tabIndex = indexAtLocation(e.getX(), e.getY());
 				if (tabIndex >= 0) {
 					Tab clickedTab = getTabForTabIndex(tabIndex);
@@ -81,7 +102,111 @@ public class MCreatorTabs extends JTabbedPane {
 			}
 		});
 
+		addMouseMotionListener(new MouseMotionAdapter() {
+			@Override public void mouseDragged(MouseEvent e) {
+				if (dragTabIndex < 0 || !PreferencesManager.PREFERENCES.ui.tabsDragReorder.get())
+					return;
+
+				int target = indexAtLocation(e.getX(), e.getY());
+				if (target < 0 || target == dragTabIndex)
+					return;
+
+				Tab dragged = getTabForTabIndex(dragTabIndex);
+				Tab targetTab = getTabForTabIndex(target);
+				if (dragged == null || !dragged.closeable) {
+					dragTabIndex = -1;
+					return;
+				}
+
+				// pinned tabs stay in the pinned zone, other tabs stay after it
+				int fixed = 0;
+				for (Tab t : tabs)
+					if (isFixed(t))
+						fixed++;
+				if (dragged.pinned ? (target >= fixed || (targetTab != null && !targetTab.closeable)) : target < fixed)
+					return;
+
+				moveTab(dragTabIndex, target);
+				dragTabIndex = target;
+			}
+		});
+
 		setUI(new OpaqueTabStripTabbedPaneUI());
+	}
+
+	private static boolean isFixed(Tab tab) {
+		return tab.pinned || !tab.closeable;
+	}
+
+	private void moveTab(int from, int to) {
+		if (from == to || from < 0 || to < 0 || from >= getTabCount() || to >= getTabCount())
+			return;
+
+		reordering = true;
+		try {
+			Component component = getComponentAt(from);
+			String title = getTitleAt(from);
+			Icon icon = getIconAt(from);
+			String tip = getToolTipTextAt(from);
+			boolean wasSelected = getSelectedIndex() == from;
+
+			removeTabAt(from);
+			insertTab(title, icon, component, tip, to);
+
+			if (wasSelected)
+				setSelectedIndex(to);
+		} finally {
+			reordering = false;
+		}
+	}
+
+	private void setTabPinned(Tab tab, boolean pin) {
+		if (!tab.closeable || tab.pinned == pin)
+			return;
+
+		tab.pinned = pin;
+		tab.content.putClientProperty("JTabbedPane.tabClosable", !pin);
+		tab.setText(tab.getText()); // refreshes the title with or without the pin mark
+
+		int fixedOthers = 0;
+		for (Tab t : tabs)
+			if (t != tab && isFixed(t))
+				fixedOthers++;
+		moveTab(tab.getIndex(), fixedOthers);
+
+		revalidate();
+		repaint();
+	}
+
+	private boolean showTabPopup(MouseEvent e) {
+		if (!e.isPopupTrigger())
+			return false;
+
+		int tabIndex = indexAtLocation(e.getX(), e.getY());
+		Tab tab = tabIndex >= 0 ? getTabForTabIndex(tabIndex) : null;
+		if (tab == null)
+			return false;
+
+		JPopupMenu menu = new JPopupMenu();
+
+		JMenuItem pin = new JMenuItem(L10N.t(tab.pinned ? "tabs.unpin" : "tabs.pin"));
+		pin.setEnabled(tab.closeable);
+		pin.addActionListener(_ -> setTabPinned(tab, !tab.pinned));
+		menu.add(pin);
+
+		menu.addSeparator();
+
+		JMenuItem close = new JMenuItem(L10N.t("tabs.close"));
+		close.setEnabled(tab.closeable && !tab.pinned);
+		close.addActionListener(_ -> closeTab(tab));
+		menu.add(close);
+
+		JMenuItem closeOthers = new JMenuItem(L10N.t("tabs.close_others"));
+		closeOthers.addActionListener(_ -> new ArrayList<>(tabs).stream().filter(t -> t != tab).forEach(this::closeTab));
+		menu.add(closeOthers);
+
+		menu.show(e.getComponent(), e.getX(), e.getY());
+		return true;
 	}
 
 	private Tab getTabForTabIndex(int index) {
@@ -174,7 +299,7 @@ public class MCreatorTabs extends JTabbedPane {
 	}
 
 	public void closeTab(Tab tab, boolean force) {
-		if (!tab.closeable)
+		if (!tab.closeable || (tab.pinned && !force))
 			return;
 
 		if (force || tab.tabClosingListener == null || tab.tabClosingListener.tabClosing(tab)) {
@@ -219,6 +344,7 @@ public class MCreatorTabs extends JTabbedPane {
 		private MCreatorTabs container;
 
 		private final boolean closeable;
+		private boolean pinned = false;
 
 		private final Object identifier;
 		private final JComponent content;
@@ -282,7 +408,7 @@ public class MCreatorTabs extends JTabbedPane {
 		public void setText(String name) {
 			this.text = name;
 			if (container != null)
-				container.setTitleAt(getIndex(), name);
+				container.setTitleAt(getIndex(), pinned ? "\u25CF " + name : name);
 		}
 
 		public void setIcon(@Nullable ImageIcon icon) {
