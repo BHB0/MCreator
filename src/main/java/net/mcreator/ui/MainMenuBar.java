@@ -21,6 +21,7 @@ package net.mcreator.ui;
 import net.mcreator.io.OS;
 import net.mcreator.io.WindowsPackage;
 import net.mcreator.ui.component.util.ComponentUtils;
+import net.mcreator.ui.dialogs.CommandPalette;
 import net.mcreator.ui.ide.CodeEditorView;
 import net.mcreator.ui.init.L10N;
 import net.mcreator.ui.laf.themes.Theme;
@@ -50,9 +51,13 @@ public abstract class MainMenuBar extends JMenuBar {
 
 		setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.current().getSecondAltBackgroundColor()));
 
+		registerCommandPaletteShortcut();
+
 		if (!macOSscreenMenuBar) {
 			JMenu logo = new JMenu("ModLab");
 			logo.setMnemonic('M');
+			logo.add(createCommandPaletteItem());
+			logo.addSeparator();
 			logo.add(mcreator.getActionRegistry().preferences);
 			logo.addSeparator();
 			logo.add(mcreator.getActionRegistry().aboutMCreator);
@@ -155,13 +160,11 @@ public abstract class MainMenuBar extends JMenuBar {
 
 		JMenu help = L10N.menu("menubar.help");
 		refreshMenuBar();
+		// ModLab: links to the MCreator website (support, knowledge base, donations) are not shown in the menu
 		help.add(mcreator.getActionRegistry().help);
-		help.add(mcreator.getActionRegistry().support);
-		help.add(mcreator.getActionRegistry().knowledgeBase);
 		help.addSeparator();
+		help.add(createCommandPaletteItem());
 		help.add(mcreator.getActionRegistry().showShortcuts);
-		help.addSeparator();
-		help.add(mcreator.getActionRegistry().donate);
 		help.addSeparator();
 		if (!WindowsPackage.isRunningAsMSIX())
 			help.add(mcreator.getActionRegistry().checkForUpdates);
@@ -169,6 +172,24 @@ public abstract class MainMenuBar extends JMenuBar {
 		help.add(mcreator.getActionRegistry().aboutMCreator);
 		help.setMnemonic('H');
 		add(help);
+	}
+
+	private JMenuItem createCommandPaletteItem() {
+		JMenuItem item = new JMenuItem(L10N.t("menubar.command_palette"));
+		item.addActionListener(_ -> CommandPalette.show(mcreator));
+		return item;
+	}
+
+	private void registerCommandPaletteShortcut() {
+		JRootPane rootPane = mcreator.getRootPane();
+		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+				KeyStroke.getKeyStroke(KeyEvent.VK_K, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
+				"modlab.commandPalette");
+		rootPane.getActionMap().put("modlab.commandPalette", new AbstractAction() {
+			@Override public void actionPerformed(java.awt.event.ActionEvent e) {
+				CommandPalette.show(mcreator);
+			}
+		});
 	}
 
 	protected abstract void assembleMenuBar(MCreator mcreator);

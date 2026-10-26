@@ -19,6 +19,7 @@
 
 package net.mcreator.ui.variants.modmaker;
 
+import net.mcreator.preferences.PreferencesManager;
 import net.mcreator.ui.MCreator;
 import net.mcreator.ui.MainToolBar;
 
@@ -33,37 +34,49 @@ class ModMakerToolBar extends MainToolBar {
 	}
 
 	@Override protected void assembleLeftSection(MCreator mcreator) {
+		// ModLab: by default only the most used buttons are shown, everything else stays in the menus
+		// and in the command palette (Ctrl+K)
+		boolean simple = PreferencesManager.PREFERENCES.ui.simplifiedToolbar.get();
+
 		hideableButton(add(mcreator.getActionRegistry().createTexture));
-		hideableButton(add(mcreator.getActionRegistry().createAnimatedTexture));
+		if (!simple)
+			hideableButton(add(mcreator.getActionRegistry().createAnimatedTexture));
 
 		addSeparator(new Dimension(10, 4));
 
 		hideableButton(add(mcreator.getActionRegistry().importBlockTexture));
 		hideableButton(add(mcreator.getActionRegistry().importItemTexture));
 		hideableButton(add(mcreator.getActionRegistry().importSound));
-		hideableButton(add(mcreator.getActionRegistry().importStructure));
 
-		addSeparator(new Dimension(10, 4));
+		if (!simple) {
+			hideableButton(add(mcreator.getActionRegistry().importStructure));
 
-		hideableButton(add(mcreator.getActionRegistry().importJavaModel));
-		hideableButton(add(mcreator.getActionRegistry().importJavaModelAnimation));
-		hideableButton(add(mcreator.getActionRegistry().importJSONModel));
-		hideableButton(add(mcreator.getActionRegistry().importBedrockModel));
+			addSeparator(new Dimension(10, 4));
 
-		addSeparator(new Dimension(10, 4));
-		hideableButton(add(mcreator.getActionRegistry().setCreativeTabItemOrder));
+			hideableButton(add(mcreator.getActionRegistry().importJavaModel));
+			hideableButton(add(mcreator.getActionRegistry().importJavaModelAnimation));
+			hideableButton(add(mcreator.getActionRegistry().importJSONModel));
+			hideableButton(add(mcreator.getActionRegistry().importBedrockModel));
+
+			addSeparator(new Dimension(10, 4));
+			hideableButton(add(mcreator.getActionRegistry().setCreativeTabItemOrder));
+		}
 
 		addSeparator(new Dimension(10, 4));
 	}
 
 	@Override protected void assembleRightSection(MCreator mcreator) {
+		boolean simple = PreferencesManager.PREFERENCES.ui.simplifiedToolbar.get();
+
 		add(mcreator.getActionRegistry().workspaceSettings);
 
 		addSeparator(new Dimension(10, 4));
 
 		add(mcreator.getActionRegistry().runClient);
-		add(mcreator.getActionRegistry().debugClient);
-		add(mcreator.getActionRegistry().runServer);
+		if (!simple) {
+			add(mcreator.getActionRegistry().debugClient);
+			add(mcreator.getActionRegistry().runServer);
+		}
 		add(mcreator.getActionRegistry().cancelGradleTaskAction);
 
 		addSeparator(new Dimension(10, 4));

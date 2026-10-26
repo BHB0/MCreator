@@ -33,15 +33,21 @@ import net.mcreator.ui.laf.themes.Theme;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class PreferencesDialog extends MCreatorDialog {
 
@@ -54,6 +60,27 @@ public class PreferencesDialog extends MCreatorDialog {
 	private final DefaultTreeModel sectionsModel = new DefaultTreeModel(sectionsRoot);
 	private final JTree sections = new JTree(sectionsModel);
 	private final CardLayout preferencesLayout = new CardLayout();
+
+	// ModLab: settings that are not useful anymore (nothing is sent to or fetched from mcreator.net)
+	private static final Set<String> OBSOLETE_ENTRIES = Set.of("googleAnalyticsEnable", "showWebsiteNewsNotifications",
+			"checkAndNotifyForPatches", "openWhatsNextPage");
+
+	// ModLab: settings that most people never change, hidden until "Show advanced options" is checked
+	private static final Set<String> ADVANCED_ENTRIES = Set.of("silentReload", "useGPUAcceleration",
+			"translucentBackground", "blockRenderer", "colorSaturation", "colorValue", "useSmartSort",
+			"expandCategories", "enableComments", "enableCollapse", "enableTrashcan", "maxTrashContents", "maxScale",
+			"minScale", "startScale", "scaleSpeed", "maximumImports", "passLangToMinecraft", "enablePerformanceMonitor",
+			"storeMetadata", "mcpEnable", "mcpPort", "autocompleteDocWindow", "useLigatures",
+			"localHistorySaveInterval", "workspaceAutosaveInterval", "automatedBackupInterval",
+			"numberOfBackupsToStore", "backupOnVersionSwitch", "nativeFileChooser", "expandSectionsByDefault",
+			"remindOfUnsavedChanges");
+
+	private static boolean showAdvanced = false;
+
+	private final JTextField searchField = new JTextField();
+	private final Map<PreferencesEntry<?>, JComponent> entryRows = new HashMap<>();
+	private final Map<PreferencesEntry<?>, String> entryTexts = new HashMap<>();
+	@Nullable private Set<String> matchingSections = null;
 
 	private final Map<PreferencesEntry<?>, JComponent> entries = new HashMap<>();
 	private final List<Runnable> pageSavers = new ArrayList<>();
@@ -85,6 +112,9 @@ public class PreferencesDialog extends MCreatorDialog {
 					boolean leaf, int row, boolean hasFocus) {
 				super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
 				setBorder(new EmptyBorder(4, 8, 4, 10));
+				if (matchingSections != null && !sel && value instanceof DefaultMutableTreeNode node && node.isLeaf()
+						&& !matchingSections.contains(String.valueOf(node.getUserObject())))
+					setForeground(Color.GRAY); // sections without any result for the current search
 				return this;
 			}
 		});
@@ -93,7 +123,26 @@ public class PreferencesDialog extends MCreatorDialog {
 
 		JSplitPane spne = new JSplitPane();
 		spne.setRightComponent(preferences);
-		spne.setLeftComponent(new JScrollPane(sections));
+		searchField.putClientProperty("JTextField.placeholderText", L10N.t("dialog.preferences.search"));
+		searchField.putClientProperty("JTextField.showClearButton", true);
+		searchField.getDocument().addDocumentListener(new DocumentListener() {
+			@Override public void insertUpdate(DocumentEvent e) {
+				applyFilter();
+			}
+
+			@Override public void removeUpdate(DocumentEvent e) {
+				applyFilter();
+			}
+
+			@Override public void changedUpdate(DocumentEvent e) {
+				applyFilter();
+			}
+		});
+		JPanel leftSide = new JPanel(new BorderLayout(0, 6));
+		leftSide.setBorder(BorderFactory.createEmptyBorder(6, 6, 0, 0));
+		leftSide.add("North", searchField);
+		leftSide.add("Center", new JScrollPane(sections));
+		spne.setLeftComponent(leftSide);
 		spne.setContinuousLayout(true);
 		spne.setDividerLocation(205);
 		add("Center", spne);
@@ -127,6 +176,13 @@ public class PreferencesDialog extends MCreatorDialog {
 		JPanel buttonsleft = new JPanel();
 		buttonsleft.add(reset);
 
+		JCheckBox advancedBox = new JCheckBox(L10N.t("dialog.preferences.show_advanced"), showAdvanced);
+		advancedBox.addActionListener(_ -> {
+			showAdvanced = advancedBox.isSelected();
+			applyFilter();
+		});
+		buttonsleft.add(advancedBox);
+
 		add("South", PanelUtils.westAndEastElement(buttonsleft, buttons));
 
 		sections.addTreeSelectionListener(_ -> {
@@ -136,6 +192,7 @@ public class PreferencesDialog extends MCreatorDialog {
 		});
 
 		loadSections();
+		applyFilter();
 
 		if (selectedTab != null)
 			selectSection(selectedTab);
@@ -161,7 +218,8 @@ public class PreferencesDialog extends MCreatorDialog {
 	private void loadSections() {
 		// Add preference entries
 		PreferencesManager.getPreferencesRegistry().forEach(
-				(_, preferences) -> preferences.stream().filter(e -> e.getSection().isVisible()).toList()
+				(_, preferences) -> preferences.stream()
+						.filter(e -> e.getSection().isVisible() && !OBSOLETE_ENTRIES.contains(e.getID())).toList()
 						.forEach(entry -> {
 							if (!sectionPanels.containsKey(entry.getSectionKey()))
 								createPreferenceSection(entry.getSectionKey());
@@ -191,6 +249,47 @@ public class PreferencesDialog extends MCreatorDialog {
 			DefaultMutableTreeNode first = (DefaultMutableTreeNode) sectionsRoot.getChildAt(0);
 			sections.setSelectionPath(new TreePath(first.getPath()));
 		}
+	}
+
+	/**
+	 * Shows only the settings matching the search, and hides advanced settings unless asked otherwise.
+	 */
+	private void applyFilter() {
+		String query = searchField.getText().trim().toLowerCase(Locale.ROOT);
+		String[] tokens = query.isEmpty() ? new String[0] : query.split("\\s+");
+
+		Set<String> matches = new HashSet<>();
+		entryRows.forEach((entry, row) -> {
+			boolean match;
+			if (tokens.length == 0) {
+				match = showAdvanced || !ADVANCED_ENTRIES.contains(entry.getID());
+			} else {
+				String text = entryTexts.get(entry);
+				match = Arrays.stream(tokens).allMatch(text::contains);
+			}
+			row.setVisible(match);
+			if (match)
+				matches.add(L10N.t("preferences.section." + entry.getSectionKey()));
+		});
+
+		matchingSections = tokens.length == 0 ? null : matches;
+
+		if (tokens.length > 0 && !matches.isEmpty()) {
+			String current = getSelectedSection();
+			if (current == null || !matches.contains(current)) {
+				for (int i = 0; i < sectionsRoot.getChildCount(); i++) {
+					String name = String.valueOf(((DefaultMutableTreeNode) sectionsRoot.getChildAt(i)).getUserObject());
+					if (matches.contains(name)) {
+						selectSection(name);
+						break;
+					}
+				}
+			}
+		}
+
+		sections.repaint();
+		preferences.revalidate();
+		preferences.repaint();
 	}
 
 	void addSection(String name) {
@@ -305,7 +404,10 @@ public class PreferencesDialog extends MCreatorDialog {
 				}
 			};
 			wrap.add("Center", component);
-			placeInside.add(PanelUtils.westAndEastElement(label, PanelUtils.pullElementUp(wrap)), getConstraints());
+			JComponent row = PanelUtils.westAndEastElement(label, PanelUtils.pullElementUp(wrap));
+			placeInside.add(row, getConstraints());
+			entryRows.put(entry, row);
+			entryTexts.put(entry, (name + " " + description).toLowerCase(Locale.ROOT));
 		} else {
 			placeInside.add(L10N.label("dialog.preferences.unknown_property_type", name), getConstraints());
 		}

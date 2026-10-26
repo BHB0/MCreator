@@ -37,6 +37,7 @@ public class UISection extends PreferencesSection {
 	public final StringEntry interfaceDensity;
 	public final StringEntry interfaceCornerStyle;
 	public final BooleanEntry tabsDragReorder;
+	public final BooleanEntry simplifiedToolbar;
 	public final StringEntry backgroundSource;
 	public final BooleanEntry usemacOSMenuBar;
 	public final BooleanEntry nativeFileChooser;
@@ -52,6 +53,7 @@ public class UISection extends PreferencesSection {
 		interfaceDensity = addEntry(new StringEntry("interfaceDensity", "Standard", "Compact", "Standard", "Comfortable"));
 		interfaceCornerStyle = addEntry(new StringEntry("interfaceCornerStyle", "Rounded", "Rounded", "Square"));
 		tabsDragReorder = addEntry(new BooleanEntry("tabsDragReorder", true));
+		simplifiedToolbar = addEntry(new BooleanEntry("simplifiedToolbar", true));
 		backgroundSource = addEntry(
 				new StringEntry("backgroundSource", "All", "All", "Current theme", "Custom", "None"));
 		usemacOSMenuBar = addEntry(new BooleanEntry("useMacOSMenuBar", true));
