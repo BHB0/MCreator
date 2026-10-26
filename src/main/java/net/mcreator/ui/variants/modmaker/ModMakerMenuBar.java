@@ -21,6 +21,7 @@ package net.mcreator.ui.variants.modmaker;
 
 import net.mcreator.ui.MCreator;
 import net.mcreator.ui.MainMenuBar;
+import net.mcreator.ui.git.GitSync;
 import net.mcreator.ui.init.L10N;
 
 import javax.swing.*;
@@ -44,6 +45,23 @@ class ModMakerMenuBar extends MainMenuBar {
 		workspace.addSeparator();
 		workspace.add(mcreator.getActionRegistry().exportToJAR);
 		add(workspace);
+
+		JMenu git = L10N.menu("menubar.git");
+		git.setMnemonic('G');
+		JMenuItem gitPush = new JMenuItem(L10N.t("git.menu.push"));
+		gitPush.addActionListener(_ -> GitSync.push(mcreator));
+		git.add(gitPush);
+		JMenuItem gitPull = new JMenuItem(L10N.t("git.menu.pull"));
+		gitPull.addActionListener(_ -> GitSync.pull(mcreator));
+		git.add(gitPull);
+		git.addSeparator();
+		JMenuItem gitStatus = new JMenuItem(L10N.t("git.menu.status"));
+		gitStatus.addActionListener(_ -> GitSync.status(mcreator));
+		git.add(gitStatus);
+		JMenuItem gitConnect = new JMenuItem(L10N.t("git.menu.connect"));
+		gitConnect.addActionListener(_ -> GitSync.connect(mcreator));
+		git.add(gitConnect);
+		add(git);
 
 		JMenu resources = L10N.menu("menubar.resources");
 		resources.setMnemonic('R');

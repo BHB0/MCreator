@@ -92,6 +92,7 @@ public class ActionRegistry {
 	public final BasicAction workspaceSettings;
 	public final BasicAction exportWorkspaceToZIP;
 	public final BasicAction exportWorkspaceToZIPWithRunDir;
+	public final BasicAction shareWorkspace;
 	public final BasicAction openWorkspaceFolder;
 	public final BasicAction setCreativeTabItemOrder;
 
@@ -274,6 +275,7 @@ public class ActionRegistry {
 		this.regenerateCode = new RegenerateCodeAction(this);
 		this.exportWorkspaceToZIP = new ExportWorkspaceToZIPAction(this);
 		this.exportWorkspaceToZIPWithRunDir = new ExportWorkspaceToZIPAction.WithRunDir(this);
+		this.shareWorkspace = new ShareWorkspaceAction(this);
 		this.showConsoleTab = new BasicAction(this, L10N.t("action.show_console"), e -> mcreator.showConsole());
 		this.showWorkspaceTab = new BasicAction(this, L10N.t("action.show_workspace"),
 				e -> mcreator.getTabs().showTab(mcreator.workspaceTab));
