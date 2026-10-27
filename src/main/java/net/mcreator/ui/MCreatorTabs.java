@@ -31,6 +31,11 @@ import net.mcreator.util.image.ImageUtils;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import java.awt.Component;
+import java.awt.event.AWTEventListener;
+import java.awt.Toolkit;
+import java.awt.Point;
+import java.awt.AWTEvent;
+import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -50,6 +55,36 @@ public class MCreatorTabs extends JTabbedPane {
 	// ModLab: tab reordering and pinning
 	private boolean reordering = false;
 	private int dragTabIndex = -1;
+
+	// Mouse events are watched globally (and filtered to this tab pane), so dragging works whichever
+	// internal component of the tab strip receives the mouse
+	private final AWTEventListener tabDragListener = event -> {
+		if (!(event instanceof MouseEvent e) || !(e.getSource() instanceof Component source))
+			return;
+		if (source != this && !SwingUtilities.isDescendingFrom(source, this))
+			return;
+
+		Point point = SwingUtilities.convertPoint(source, e.getPoint(), this);
+		switch (e.getID()) {
+		case MouseEvent.MOUSE_PRESSED ->
+				dragTabIndex = SwingUtilities.isLeftMouseButton(e) ? indexAtLocation(point.x, point.y) : -1;
+		case MouseEvent.MOUSE_RELEASED -> dragTabIndex = -1;
+		case MouseEvent.MOUSE_DRAGGED -> dragTab(point.x);
+		default -> {
+		}
+		}
+	};
+
+	@Override public void addNotify() {
+		super.addNotify();
+		Toolkit.getDefaultToolkit().addAWTEventListener(tabDragListener,
+				AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+	}
+
+	@Override public void removeNotify() {
+		Toolkit.getDefaultToolkit().removeAWTEventListener(tabDragListener);
+		super.removeNotify();
+	}
 
 	MCreatorTabs() {
 		putClientProperty("JTabbedPane.tabCloseCallback", (IntConsumer) tabIndex -> {
@@ -80,13 +115,10 @@ public class MCreatorTabs extends JTabbedPane {
 
 		addMouseListener(new MouseAdapter() {
 			@Override public void mousePressed(MouseEvent e) {
-				dragTabIndex = SwingUtilities.isLeftMouseButton(e) ? indexAtLocation(e.getX(), e.getY()) : -1;
 				showTabPopup(e);
 			}
 
 			@Override public void mouseReleased(MouseEvent e) {
-				dragTabIndex = -1;
-
 				if (showTabPopup(e))
 					return;
 
@@ -102,36 +134,59 @@ public class MCreatorTabs extends JTabbedPane {
 			}
 		});
 
-		addMouseMotionListener(new MouseMotionAdapter() {
-			@Override public void mouseDragged(MouseEvent e) {
-				if (dragTabIndex < 0 || !PreferencesManager.PREFERENCES.ui.tabsDragReorder.get())
-					return;
-
-				int target = indexAtLocation(e.getX(), e.getY());
-				if (target < 0 || target == dragTabIndex)
-					return;
-
-				Tab dragged = getTabForTabIndex(dragTabIndex);
-				Tab targetTab = getTabForTabIndex(target);
-				if (dragged == null || !dragged.closeable) {
-					dragTabIndex = -1;
-					return;
-				}
-
-				// pinned tabs stay in the pinned zone, other tabs stay after it
-				int fixed = 0;
-				for (Tab t : tabs)
-					if (isFixed(t))
-						fixed++;
-				if (dragged.pinned ? (target >= fixed || (targetTab != null && !targetTab.closeable)) : target < fixed)
-					return;
-
-				moveTab(dragTabIndex, target);
-				dragTabIndex = target;
-			}
-		});
-
 		setUI(new OpaqueTabStripTabbedPaneUI());
+	}
+
+	private void dragTab(int x) {
+		if (dragTabIndex < 0 || !PreferencesManager.PREFERENCES.ui.tabsDragReorder.get())
+			return;
+
+		// only the horizontal position matters, so the pointer can drift above or below the tab strip
+		int target = tabIndexAtX(x);
+		if (target < 0 || target == dragTabIndex)
+			return;
+
+		// swap only once the pointer passed the middle of the other tab, otherwise tabs of
+		// different widths would flip back and forth
+		Rectangle bounds = getBoundsAt(target);
+		if (bounds == null)
+			return;
+		int middle = bounds.x + bounds.width / 2;
+		if (target > dragTabIndex ? x < middle : x > middle)
+			return;
+
+		Tab dragged = getTabForTabIndex(dragTabIndex);
+		Tab targetTab = getTabForTabIndex(target);
+		if (dragged == null || !dragged.closeable) {
+			dragTabIndex = -1;
+			return;
+		}
+
+		// pinned tabs move among pinned tabs, other tabs among other tabs
+		if (targetTab == null || !targetTab.closeable || targetTab.pinned != dragged.pinned)
+			return;
+
+		moveTab(dragTabIndex, target);
+		dragTabIndex = target;
+	}
+
+	private boolean canMoveTab(Tab tab, int delta) {
+		if (!tab.closeable)
+			return false;
+		int target = tab.getIndex() + delta;
+		if (target < 0 || target >= getTabCount())
+			return false;
+		Tab other = getTabForTabIndex(target);
+		return other != null && other.closeable && other.pinned == tab.pinned;
+	}
+
+	private int tabIndexAtX(int x) {
+		for (int i = 0; i < getTabCount(); i++) {
+			Rectangle bounds = getBoundsAt(i);
+			if (bounds != null && x >= bounds.x && x < bounds.x + bounds.width)
+				return i;
+		}
+		return -1;
 	}
 
 	private static boolean isFixed(Tab tab) {
@@ -193,6 +248,16 @@ public class MCreatorTabs extends JTabbedPane {
 		pin.setEnabled(tab.closeable);
 		pin.addActionListener(_ -> setTabPinned(tab, !tab.pinned));
 		menu.add(pin);
+
+		JMenuItem moveLeft = new JMenuItem(L10N.t("tabs.move_left"));
+		moveLeft.setEnabled(canMoveTab(tab, -1));
+		moveLeft.addActionListener(_ -> moveTab(tab.getIndex(), tab.getIndex() - 1));
+		menu.add(moveLeft);
+
+		JMenuItem moveRight = new JMenuItem(L10N.t("tabs.move_right"));
+		moveRight.setEnabled(canMoveTab(tab, 1));
+		moveRight.addActionListener(_ -> moveTab(tab.getIndex(), tab.getIndex() + 1));
+		menu.add(moveRight);
 
 		menu.addSeparator();
 

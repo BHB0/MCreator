@@ -102,14 +102,6 @@ class RecentWorkspacesRenderer extends JPanel implements ListCellRenderer<Recent
 			g2.drawRoundRect(x, y, w - 1, h - 1, 14, 14);
 		}
 
-		if (version != null) {
-			String[] parts = version.split("\\.");
-			String shortVersion = parts.length > 1 ? parts[0] + "." + parts[1] : version;
-			g2.setFont(getFont().deriveFont(10.0f));
-			g2.setColor(isSelected ? accent : Theme.current().getAltForegroundColor());
-			g2.drawString(shortVersion, x + w - g2.getFontMetrics().stringWidth(shortVersion) - 10, y + 16);
-		}
-
 		g2.dispose();
 		super.paintComponent(g);
 	}

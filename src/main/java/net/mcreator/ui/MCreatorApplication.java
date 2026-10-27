@@ -18,6 +18,7 @@
 
 package net.mcreator.ui;
 
+import net.mcreator.ModLabConfig;
 import net.mcreator.Launcher;
 import net.mcreator.blockly.data.BlocklyLoader;
 import net.mcreator.element.ModElementTypeLoader;
@@ -223,7 +224,7 @@ public final class MCreatorApplication {
 			mcreatorMcp = new MCreatorMcpManager();
 
 			// Do not externalize this text
-			discordClient.updatePresence("Just opened", "Version " + Launcher.version.getMajorString());
+			discordClient.updatePresence("Just opened", "ModLab V" + ModLabConfig.version());
 
 			splashScreen.setProgress(100, "Loading ModLab windows");
 

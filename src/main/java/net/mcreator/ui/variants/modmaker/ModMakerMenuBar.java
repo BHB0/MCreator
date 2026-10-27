@@ -61,6 +61,9 @@ class ModMakerMenuBar extends MainMenuBar {
 		JMenuItem gitConnect = new JMenuItem(L10N.t("git.menu.connect"));
 		gitConnect.addActionListener(_ -> GitSync.connect(mcreator));
 		git.add(gitConnect);
+		JMenuItem gitInvite = new JMenuItem(L10N.t("git.menu.invite"));
+		gitInvite.addActionListener(_ -> GitSync.invite(mcreator));
+		git.add(gitInvite);
 		add(git);
 
 		JMenu resources = L10N.menu("menubar.resources");

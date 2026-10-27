@@ -22,6 +22,7 @@ package net.mcreator.ui.git;
 import net.mcreator.ui.MCreator;
 import net.mcreator.ui.dialogs.ProgressDialog;
 import net.mcreator.ui.init.L10N;
+import net.mcreator.util.DesktopUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,6 +39,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.function.Supplier;
 
 /**
@@ -61,7 +64,7 @@ public final class GitSync {
 		}
 	}
 
-	private record PullResult(GitResult result, boolean changed, boolean conflict) {}
+	private record PullResult(GitResult result, boolean changed, boolean conflict, boolean unrelated) {}
 
 	private final MCreator mcreator;
 	private final File dir;
@@ -81,6 +84,10 @@ public final class GitSync {
 
 	public static void pull(MCreator mcreator) {
 		new GitSync(mcreator).pull();
+	}
+
+	public static void invite(MCreator mcreator) {
+		new GitSync(mcreator).invite();
 	}
 
 	public static void status(MCreator mcreator) {
@@ -184,26 +191,16 @@ public final class GitSync {
 
 		mcreator.getWorkspace().getFileManager().saveWorkspaceDirectlyAndWait();
 
-		PullResult pull = withProgress(L10N.t("git.pull.title"), () -> {
-			String before = git("rev-parse", "HEAD").output().trim();
+		PullResult pull = doPull(false);
 
-			// never lose local work: unsent changes are saved in a commit before merging
-			GitResult add = git("add", "-A");
-			if (!add.ok())
-				return new PullResult(add, false, false);
-			if (!git("status", "--porcelain").output().isBlank()) {
-				GitResult commit = git("commit", "-m", "ModLab: backup before getting changes");
-				if (!commit.ok())
-					return new PullResult(commit, false, false);
-			}
-
-			String branch = git("rev-parse", "--abbrev-ref", "HEAD").output().trim();
-			GitResult merge = git("pull", "--no-rebase", "--no-edit", "origin", branch);
-			String after = git("rev-parse", "HEAD").output().trim();
-
-			boolean conflict = merge.output().contains("CONFLICT") || merge.output().contains("Automatic merge failed");
-			return new PullResult(merge, !before.equals(after), conflict);
-		});
+		// the repository has its own history, unrelated to this workspace: ask before merging both
+		if (pull != null && pull.unrelated()) {
+			int choice = JOptionPane.showConfirmDialog(mcreator, L10N.t("git.pull.unrelated"),
+					L10N.t("git.pull.title"), JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+			if (choice != JOptionPane.YES_OPTION)
+				return;
+			pull = doPull(true);
+		}
 
 		if (pull == null) {
 			showOutput(L10N.t("git.pull.title"), explain(null), JOptionPane.ERROR_MESSAGE);
@@ -231,6 +228,123 @@ public final class GitSync {
 			JOptionPane.showMessageDialog(mcreator, L10N.t("git.pull.up_to_date"), L10N.t("git.pull.title"),
 					JOptionPane.INFORMATION_MESSAGE);
 		}
+	}
+
+	private PullResult doPull(boolean allowUnrelatedHistories) {
+		return withProgress(L10N.t("git.pull.title"), () -> {
+			String before = git("rev-parse", "HEAD").output().trim();
+
+			// never lose local work: unsent changes are saved in a commit before merging
+			GitResult add = git("add", "-A");
+			if (!add.ok())
+				return new PullResult(add, false, false, false);
+			if (!git("status", "--porcelain").output().isBlank()) {
+				GitResult commit = git("commit", "-m", "ModLab: backup before getting changes");
+				if (!commit.ok())
+					return new PullResult(commit, false, false, false);
+			}
+
+			String branch = git("rev-parse", "--abbrev-ref", "HEAD").output().trim();
+			List<String> args = new ArrayList<>(List.of("pull", "--no-rebase", "--no-edit"));
+			if (allowUnrelatedHistories)
+				args.add("--allow-unrelated-histories");
+			args.add("origin");
+			args.add(branch);
+
+			GitResult merge = git(args.toArray(new String[0]));
+			String after = git("rev-parse", "HEAD").output().trim();
+
+			String output = merge.output();
+			boolean conflict = output.contains("CONFLICT") || output.contains("Automatic merge failed");
+			boolean unrelated = !merge.ok() && output.contains("unrelated histories");
+			return new PullResult(merge, !before.equals(after), conflict, unrelated);
+		});
+	}
+
+	/**
+	 * Invites someone to the GitHub repository of the workspace, and offers to make the repository private first
+	 */
+	private void invite() {
+		String title = L10N.t("git.invite.title");
+
+		if (!checkGit())
+			return;
+		if (!hasRepo() || !hasRemote()) {
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.status.no_repo"), title,
+					JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+
+		String slug = githubSlug();
+		if (slug == null) {
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.no_slug"), title,
+					JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		// GitHub CLI does the sign in, so ModLab never handles passwords or tokens
+		if (!exec("gh", "--version").ok()) {
+			int choice = JOptionPane.showConfirmDialog(mcreator, L10N.t("git.invite.manual", slug), title,
+					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+			if (choice == JOptionPane.YES_OPTION)
+				DesktopUtils.browseSafe("https://github.com/" + slug + "/settings/access");
+			return;
+		}
+		if (!exec("gh", "auth", "status").ok()) {
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.login"), title, JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		String visibility = exec("gh", "repo", "view", slug, "--json", "visibility", "-q", ".visibility").output()
+				.trim();
+		if ("PUBLIC".equalsIgnoreCase(visibility)) {
+			Object[] options = { L10N.t("git.invite.make_private"), L10N.t("git.invite.keep_public"),
+					UIManager.getString("OptionPane.cancelButtonText") };
+			int choice = JOptionPane.showOptionDialog(mcreator, L10N.t("git.invite.public", slug), title,
+					JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[0]);
+			if (choice == 0) {
+				GitResult edit = withProgress(title, () -> exec("gh", "repo", "edit", slug, "--visibility", "private",
+						"--accept-visibility-change-consequences"));
+				if (edit == null || !edit.ok()) {
+					showOutput(title, explain(edit), JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+			} else if (choice != 1) {
+				return;
+			}
+		}
+
+		Object answer = JOptionPane.showInputDialog(mcreator, L10N.t("git.invite.user"), title,
+				JOptionPane.QUESTION_MESSAGE, null, null, "");
+		if (answer == null)
+			return;
+		String user = answer.toString().trim().replaceFirst("^@", "");
+		if (!user.matches("[A-Za-z0-9-]{1,39}")) {
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.invalid_user"), title,
+					JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		GitResult result = withProgress(title, () -> exec("gh", "api", "--method", "PUT",
+				"repos/" + slug + "/collaborators/" + user, "-f", "permission=push"));
+		if (result != null && result.ok()) {
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.done", user), title,
+					JOptionPane.INFORMATION_MESSAGE);
+		} else {
+			showOutput(title, explain(result), JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	/**
+	 * @return owner/repository of the GitHub remote, or null if the remote is not on GitHub
+	 */
+	private String githubSlug() {
+		GitResult remote = git("remote", "get-url", "origin");
+		if (!remote.ok())
+			return null;
+		Matcher matcher = Pattern.compile("github\\.com[:/]+([^/]+)/([^/]+?)(?:\\.git)?/?$")
+				.matcher(remote.output().trim());
+		return matcher.find() ? matcher.group(1) + "/" + matcher.group(2) : null;
 	}
 
 	private void status() {
@@ -325,13 +439,18 @@ public final class GitSync {
 	}
 
 	private GitResult git(String... args) {
+		return exec("git", args);
+	}
+
+	private GitResult exec(String executable, String... args) {
 		List<String> command = new ArrayList<>();
-		command.add("git");
+		command.add(executable);
 		command.addAll(Arrays.asList(args));
 
 		try {
 			ProcessBuilder builder = new ProcessBuilder(command).directory(dir).redirectErrorStream(true);
 			builder.environment().put("GIT_TERMINAL_PROMPT", "0"); // never wait for a hidden password prompt
+			builder.environment().put("GH_PROMPT_DISABLED", "1");
 			Process process = builder.start();
 
 			StringBuffer output = new StringBuffer();
@@ -352,7 +471,7 @@ public final class GitSync {
 
 			return new GitResult(process.exitValue(), output.toString());
 		} catch (IOException e) {
-			return new GitResult(-2, "Git not found: " + e.getMessage());
+			return new GitResult(-2, executable + " not found: " + e.getMessage());
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			return new GitResult(-3, "Interrupted");

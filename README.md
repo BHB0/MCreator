@@ -1,77 +1,32 @@
-[![MCreator](https://mcreator.net/image/brand/mcreator300s.png)](https://mcreator.net/)
+# ModLab
 
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://github.com/MCreator/MCreator/blob/master/LICENSE.txt)
-[![Build](https://img.shields.io/github/actions/workflow/status/MCreator/MCreator/test.yml?style=flat-square&branch=master)](https://github.com/MCreator/MCreator/actions/workflows/test.yml)
-[![Javadoc](https://img.shields.io/badge/java-doc-%44cc11?style=flat-square)](https://mcreator.github.io/MCreator)
-[![Download](https://img.shields.io/badge/Download-release-%2393c54b?style=flat-square)](https://mcreator.net/download)
-[![Donate](https://img.shields.io/badge/Donate-%E2%99%A1-%23ff7c00?style=flat-square)](https://mcreator.net/donate)
-# MCreator - Minecraft Mod Maker
+**ModLab** is a personal, modernized fork of [MCreator](https://mcreator.net/), the software used to make Minecraft Java Edition mods, Minecraft Bedrock Edition add-ons and data packs.
 
-<img align="right" width="300" src="https://mcreator.net/image/about/about1.png">
+ModLab is **not** an official MCreator product and is not affiliated with Pylo or Mojang. MCreator is developed by [Pylo](https://mcreator.net/) and its community contributors, and ModLab is based on their work (GPL-3.0). If you like it, please support the people who built the original: https://mcreator.net/donate
 
-https://mcreator.net/ - MCreator is a software used to make Minecraft Java Edition mods, Minecraft Bedrock Edition Add-Ons, and data packs using an intuitive easy-to-learn interface or with an integrated code editor. 
+## What is different
 
-It is used worldwide by Minecraft players, aspiring mod developers, [for education, online classes, and STEM workshops](https://mcreator.net/education).
+- New name, logo and colors
+- Modern rounded interface with density and corner style settings
+- New home page, tabs that can be reordered and pinned
+- Command palette (`Ctrl+K`), searchable preferences, simplified toolbar and menus
+- One-click workspace sharing and simple Git synchronization
+- No usage statistics, news or website requests: ModLab only contacts GitHub (for updates) and Discord (optional rich presence)
+- Updates come from the releases of this repository
 
-## Download, community, and support
+## Run from source
 
-This repository page is for people looking to contribute to MCreator. Visit https://mcreator.net/ to download MCreator distribution and to engage in the community. Check https://mcreator.net/support to find the support, forums, knowledge base, and more.
+1. Install Git, the IntelliJ IDEA IDE and a JDK 21 (used to run Gradle)
+2. `git clone --recursive https://github.com/BHB0/ModLab.git`
+3. Open the folder in IntelliJ, run the Gradle task `setup > downloadJDKWin64` (or the one for your system), then reload Gradle
+4. Run the Gradle task `runMCreator`
 
-Download MCreator binary distributions on https://mcreator.net/download.
+The internal Java packages keep the `net.mcreator` name on purpose, so that MCreator plugins and existing workspaces keep working.
 
-You can also download MCreator from Microsoft Store as a donation to the project and get automatic updates as a bonus.
+## Releases
 
-[<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="180">](https://mcreator.net/msstore)
+Versions are named `V1.0.0`, `V1.1.0`, ... and published in the [Releases](https://github.com/BHB0/ModLab/releases) page.
 
-## Development
+## License
 
-To clone this repository, run `git clone --recursive https://github.com/MCreator/MCreator.git`.
-
-MCreator uses Gradle build system to manage the building and exporting. Use `runMCreator` task to run test MCreator.
-
-> [!TIP]
-> It is recommended to use Intellij IDEA for development and testing. Learn more about the development process, and 
-tips on [MCreator developers wiki](https://github.com/MCreator/MCreator/wiki).
-
-## Contributing
-
-You are welcome to support this project by opening pull requests. Read more about contributing in our [contributing guidelines](CONTRIBUTING.md).
-Before we can use your code, you must sign the [MCreator CLA](https://cla-assistant.io/MCreator/MCreator).
-
-Big thanks to [all the people](https://github.com/MCreator/MCreator/graphs/contributors) who already contributed to MCreator! 💚
-
-<a href="https://github.com/MCreator/MCreator/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MCreator/MCreator" width="615"/>
-</a>
-
-### Translations
-
-> [!TIP]
-> If you would like to help us translate MCreator to your language, join us on [translate.mcreator.net](https://translate.mcreator.net/)! If your language is not on the list yet, feel free to suggest us to add it.
-
-## License and trademark
-
-MCreator is licensed under the GPL-3.0 license (with exceptions implemented as specified in section 7 of GPL-3.0) if not otherwise stated in source files or other files of this project. Copyright 2020 Pylo and [contributors](https://github.com/MCreator/MCreator/graphs/contributors).
-
-MCreator is a trademark of Pylo. Custom distributions of this software may not include Pylo or MCreator trademark (trademark name and logo) to not confuse the software with the official distribution of MCreator project.
-MCreator and Pylo brand files in this repository are not covered by the GPL-3.0 license.
-
-MCreator uses several third-party libraries and projects. License files, attributions, and credits for these projects are located in the `license` subdirectory.
-
-Some code generators use official Minecraft mappings. 
-The use of these mappings is covered under a license by Microsoft. You should
-be fully aware of this license and the fact your mod may use these mappings.
-At the time of writing, the license is:
-
-> © 2020 Microsoft Corporation. These mappings are provided "as-is" and you bear 
-> the risk of using them. You may copy and use the mappings for development purposes, 
-> but you may not redistribute the mappings complete and unmodified. 
-> Microsoft makes no warranties, express or implied, with respect to the mappings 
-> provided here.  Use and modification of this document or the source code (in any form) 
-> of Minecraft: Java Edition is governed by the Minecraft End User License Agreement 
-> available at https://account.mojang.com/documents/minecraft_eula.
-
-## Notice
-
-> [!IMPORTANT]
-> NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.
+ModLab is distributed under the GNU General Public License v3.0, like MCreator. See `LICENSE.txt`.

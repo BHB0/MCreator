@@ -18,6 +18,7 @@
 
 package net.mcreator.ui;
 
+import net.mcreator.ModLabConfig;
 import net.mcreator.Launcher;
 import net.mcreator.generator.Generator;
 import net.mcreator.generator.GeneratorFlavor;
@@ -408,7 +409,7 @@ public abstract class MCreator extends MCreatorFrame {
 			// Do not externalize this text
 			application.getDiscordClient()
 					.updatePresence("Working on " + workspace.getWorkspaceSettings().getModName() + tabAddition,
-							Launcher.version.getMajorString() + " for " + workspace.getGenerator()
+							"ModLab V" + ModLabConfig.version() + " for " + workspace.getGenerator()
 									.getGeneratorMinecraftVersion(),
 							"type-" + workspace.getGeneratorConfiguration().getGeneratorFlavor().name()
 									.toLowerCase(Locale.ENGLISH));

@@ -80,6 +80,7 @@ public class StatusBar extends JPanel {
 			}
 		});
 		donate.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		donate.setToolTipText(L10N.t("statusbar.donate.tooltip"));
 		left.add(donate);
 		left.add(new JEmptyBox(9, 3));
 

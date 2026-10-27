@@ -168,6 +168,8 @@ public abstract class MainMenuBar extends JMenuBar {
 		help.add(createCommandPaletteItem());
 		help.add(mcreator.getActionRegistry().showShortcuts);
 		help.addSeparator();
+		help.add(mcreator.getActionRegistry().donate); // clearly labelled: it is for the MCreator developers
+		help.addSeparator();
 		if (!WindowsPackage.isRunningAsMSIX())
 			help.add(mcreator.getActionRegistry().checkForUpdates);
 		help.add(mcreator.getActionRegistry().checkForPluginUpdates);

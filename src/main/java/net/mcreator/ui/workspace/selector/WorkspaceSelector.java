@@ -146,6 +146,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 		donate.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		ComponentUtils.deriveFont(donate, 13);
 		donate.setForeground(Theme.current().getForegroundColor());
+		donate.setToolTipText(L10N.t("statusbar.donate.tooltip"));
 		donate.setBorder(BorderFactory.createEmptyBorder());
 		donate.setHorizontalTextPosition(JLabel.LEFT);
 		donate.addMouseListener(new MouseAdapter() {
@@ -300,9 +301,11 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 			}
 		});
 
+		setMinimumSize(new Dimension(850, 500));
 		setSize(850, 500);
-		setResizable(false);
+		setResizable(true);
 		setLocationRelativeTo(null);
+		setExtendedState(JFrame.MAXIMIZED_BOTH); // ModLab opens maximized by default
 
 		if (OS.getOS() == OS.WINDOWS) {
 			getRootPane().putClientProperty(FlatClientProperties.FULL_WINDOW_CONTENT, true);
@@ -546,7 +549,7 @@ public final class WorkspaceSelector extends JFrame implements DropTargetListene
 	private void initWebsitePanel() {
 		// ModLab: no news or mod of the week from mcreator.net, only the version is shown
 		JLabel info = new JLabel("<html><font style=\"font-size: 15px; color: #f5f5f5;\">ModLab</font>&nbsp;&nbsp;"
-				+ "<font style=\"font-size: 11px; color: #c2c2c2;\">" + ModLabConfig.version() + "</font>");
+				+ "<font style=\"font-size: 11px; color: #c2c2c2;\">V" + ModLabConfig.version() + "</font>");
 		JPanel south = new JPanel(new BorderLayout());
 		south.setOpaque(false);
 		south.add("West", info);
