@@ -19,6 +19,7 @@
 
 package net.mcreator.ui.dialogs;
 
+import net.mcreator.preferences.PreferencesManager;
 import net.mcreator.ui.MCreator;
 import net.mcreator.ui.init.L10N;
 import net.mcreator.ui.laf.themes.Theme;
@@ -256,7 +257,8 @@ public class CommandPalette extends JDialog {
 				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 				Color accent = Theme.current().getInterfaceAccentColor();
 				g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 45));
-				g2.fillRoundRect(6, 2, getWidth() - 12, getHeight() - 4, 12, 12);
+				int arc = "Square".equals(PreferencesManager.PREFERENCES.ui.interfaceCornerStyle.get()) ? 0 : 12;
+				g2.fillRoundRect(6, 2, getWidth() - 12, getHeight() - 4, arc, arc);
 				g2.dispose();
 			}
 			super.paintComponent(g);

@@ -18,6 +18,7 @@
 
 package net.mcreator.ui.workspace.selector;
 
+import net.mcreator.preferences.PreferencesManager;
 import net.mcreator.generator.GeneratorFlavor;
 import net.mcreator.ui.component.util.PanelUtils;
 import net.mcreator.ui.init.L10N;
@@ -90,16 +91,17 @@ class RecentWorkspacesRenderer extends JPanel implements ListCellRenderer<Recent
 
 		Color accent = Theme.current().getInterfaceAccentColor();
 		int x = 8, y = 4, w = getWidth() - 16, h = getHeight() - 8;
+		int arc = "Square".equals(PreferencesManager.PREFERENCES.ui.interfaceCornerStyle.get()) ? 0 : 14;
 
 		g2.setColor(isSelected ?
 				new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 45) :
 				Theme.current().getAltBackgroundColor());
-		g2.fillRoundRect(x, y, w, h, 14, 14);
+		g2.fillRoundRect(x, y, w, h, arc, arc);
 
 		if (isSelected) {
 			g2.setColor(accent);
 			g2.setStroke(new BasicStroke(1.5f));
-			g2.drawRoundRect(x, y, w - 1, h - 1, 14, 14);
+			g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
 		}
 
 		g2.dispose();

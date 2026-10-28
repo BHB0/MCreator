@@ -36,7 +36,7 @@ class ModMakerToolBar extends MainToolBar {
 	@Override protected void assembleLeftSection(MCreator mcreator) {
 		// ModLab: by default only the most used buttons are shown, everything else stays in the menus
 		// and in the command palette (Ctrl+K)
-		boolean simple = PreferencesManager.PREFERENCES.ui.simplifiedToolbar.get();
+		boolean simple = "Simplified".equals(PreferencesManager.PREFERENCES.ui.toolbarStyle.get());
 
 		hideableButton(add(mcreator.getActionRegistry().createTexture));
 		if (!simple)
@@ -66,7 +66,7 @@ class ModMakerToolBar extends MainToolBar {
 	}
 
 	@Override protected void assembleRightSection(MCreator mcreator) {
-		boolean simple = PreferencesManager.PREFERENCES.ui.simplifiedToolbar.get();
+		boolean simple = "Simplified".equals(PreferencesManager.PREFERENCES.ui.toolbarStyle.get());
 
 		add(mcreator.getActionRegistry().workspaceSettings);
 

@@ -22,6 +22,7 @@ import net.mcreator.plugin.MCREvent;
 import net.mcreator.preferences.PreferencesManager;
 import net.mcreator.plugin.events.ui.TabEvent;
 import net.mcreator.ui.init.L10N;
+import net.mcreator.ui.laf.themes.Theme;
 import net.mcreator.ui.laf.OpaqueTabStripTabbedPaneUI;
 import net.mcreator.ui.views.ViewBase;
 import net.mcreator.util.image.EmptyIcon;
@@ -31,6 +32,12 @@ import net.mcreator.util.image.ImageUtils;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import java.awt.Component;
+import java.awt.RenderingHints;
+import java.awt.Graphics2D;
+import java.awt.Graphics;
+import java.awt.Cursor;
+import java.awt.Color;
+import java.awt.BasicStroke;
 import java.awt.event.AWTEventListener;
 import java.awt.Toolkit;
 import java.awt.Point;
@@ -55,6 +62,7 @@ public class MCreatorTabs extends JTabbedPane {
 	// ModLab: tab reordering and pinning
 	private boolean reordering = false;
 	private int dragTabIndex = -1;
+	private boolean dragging = false;
 
 	// Mouse events are watched globally (and filtered to this tab pane), so dragging works whichever
 	// internal component of the tab strip receives the mouse
@@ -66,14 +74,53 @@ public class MCreatorTabs extends JTabbedPane {
 
 		Point point = SwingUtilities.convertPoint(source, e.getPoint(), this);
 		switch (e.getID()) {
-		case MouseEvent.MOUSE_PRESSED ->
-				dragTabIndex = SwingUtilities.isLeftMouseButton(e) ? indexAtLocation(point.x, point.y) : -1;
-		case MouseEvent.MOUSE_RELEASED -> dragTabIndex = -1;
-		case MouseEvent.MOUSE_DRAGGED -> dragTab(point.x);
+		case MouseEvent.MOUSE_PRESSED -> {
+			int pressed = SwingUtilities.isLeftMouseButton(e) ? indexAtLocation(point.x, point.y) : -1;
+			Tab pressedTab = pressed >= 0 ? getTabForTabIndex(pressed) : null;
+			dragTabIndex = pressedTab != null && pressedTab.closeable ? pressed : -1;
+		}
+		case MouseEvent.MOUSE_RELEASED -> {
+			dragTabIndex = -1;
+			if (dragging) {
+				dragging = false;
+				setCursor(Cursor.getDefaultCursor());
+				repaint();
+			}
+		}
+		case MouseEvent.MOUSE_DRAGGED -> {
+			if (dragTabIndex >= 0 && !dragging) {
+				dragging = true;
+				setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+			}
+			dragTab(point.x);
+			if (dragging)
+				repaint();
+		}
 		default -> {
 		}
 		}
 	};
+
+	// the tab being dragged is highlighted with the accent color
+	@Override public void paint(Graphics g) {
+		super.paint(g);
+
+		if (dragging && dragTabIndex >= 0 && dragTabIndex < getTabCount()) {
+			Rectangle bounds = getBoundsAt(dragTabIndex);
+			if (bounds != null) {
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Color accent = Theme.current().getInterfaceAccentColor();
+				int arc = "Square".equals(PreferencesManager.PREFERENCES.ui.interfaceCornerStyle.get()) ? 0 : 10;
+				g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 55));
+				g2.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, arc, arc);
+				g2.setColor(accent);
+				g2.setStroke(new BasicStroke(2f));
+				g2.drawRoundRect(bounds.x + 1, bounds.y + 1, bounds.width - 3, bounds.height - 3, arc, arc);
+				g2.dispose();
+			}
+		}
+	}
 
 	@Override public void addNotify() {
 		super.addNotify();
@@ -138,7 +185,7 @@ public class MCreatorTabs extends JTabbedPane {
 	}
 
 	private void dragTab(int x) {
-		if (dragTabIndex < 0 || !PreferencesManager.PREFERENCES.ui.tabsDragReorder.get())
+		if (dragTabIndex < 0)
 			return;
 
 		// only the horizontal position matters, so the pointer can drift above or below the tab strip

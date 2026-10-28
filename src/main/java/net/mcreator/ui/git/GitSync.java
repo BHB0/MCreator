@@ -20,6 +20,9 @@
 package net.mcreator.ui.git;
 
 import net.mcreator.ui.MCreator;
+import net.mcreator.ui.MCreatorApplication;
+import net.mcreator.ModLabConfig;
+import com.google.gson.JsonParser;
 import net.mcreator.ui.dialogs.ProgressDialog;
 import net.mcreator.ui.init.L10N;
 import net.mcreator.util.DesktopUtils;
@@ -30,6 +33,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.net.http.HttpResponse;
+import java.net.http.HttpRequest;
+import java.net.http.HttpClient;
+import java.net.URI;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
@@ -56,7 +65,8 @@ public final class GitSync {
 	// Generated or local files that should not be shared (same idea as the shareable ZIP exports)
 	private static final String GITIGNORE = String.join("\n", "# ModLab workspace: generated or local files",
 			".gradle/", "build/", "run/", "runs/", ".idea/", ".eclipse/", ".settings/", ".mcreator/", "/gradle/",
-			"/build.gradle", "/gradlew", "/gradlew.bat", "/mcreator.gradle", "/.classpath", "/.project", "*.iml", "");
+			"/build.gradle", "/gradlew", "/gradlew.bat", "/mcreator.gradle", "/gradle.properties", "/settings.gradle", "/.classpath",
+			"/.project", "*.iml", "");
 
 	private record GitResult(int code, String output) {
 		boolean ok() {
@@ -220,10 +230,9 @@ public final class GitSync {
 				showOutput(L10N.t("git.pull.title"), explain(pull.result()), JOptionPane.ERROR_MESSAGE);
 			}
 		} else if (pull.changed()) {
-			int choice = JOptionPane.showConfirmDialog(mcreator, L10N.t("git.pull.reload"), L10N.t("git.pull.title"),
-					JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-			if (choice == JOptionPane.YES_OPTION)
-				mcreator.closeThisMCreator(mcreator.getApplication().getOpenMCreatorsCount() <= 1);
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.pull.reload"), L10N.t("git.pull.title"),
+					JOptionPane.INFORMATION_MESSAGE);
+			reloadWorkspace();
 		} else {
 			JOptionPane.showMessageDialog(mcreator, L10N.t("git.pull.up_to_date"), L10N.t("git.pull.title"),
 					JOptionPane.INFORMATION_MESSAGE);
@@ -262,7 +271,42 @@ public final class GitSync {
 	}
 
 	/**
-	 * Invites someone to the GitHub repository of the workspace, and offers to make the repository private first
+	 * Closes the workspace and opens it again, so the changes downloaded by Git are loaded.
+	 */
+	private void reloadWorkspace() {
+		File workspaceFile = mcreator.getWorkspace().getFileManager().getWorkspaceFile();
+		MCreatorApplication application = mcreator.getApplication();
+
+		byte[] downloaded;
+		try {
+			downloaded = Files.readAllBytes(workspaceFile.toPath());
+		} catch (IOException e) {
+			LOG.error("Failed to read the downloaded workspace file", e);
+			JOptionPane.showMessageDialog(mcreator, L10N.t("git.pull.reload_failed"), L10N.t("git.pull.title"),
+					JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		// Closing a workspace saves the version kept in memory, which would erase the downloaded changes.
+		// So the downloaded workspace file is written back right after closing, then the workspace is opened again.
+		if (!mcreator.closeThisMCreator(true))
+			return;
+
+		try {
+			Files.write(workspaceFile.toPath(), downloaded);
+		} catch (IOException e) {
+			LOG.error("Failed to restore the downloaded workspace file", e);
+			JOptionPane.showMessageDialog(null, L10N.t("git.pull.reload_failed"), L10N.t("git.pull.title"),
+					JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+
+		application.openWorkspaceInMCreator(workspaceFile, true);
+	}
+
+	/**
+	 * Invites someone to the GitHub repository of the workspace, and offers to make the repository private first.
+	 * It uses the GitHub account that Git already uses on this computer, nothing else has to be installed.
 	 */
 	private void invite() {
 		String title = L10N.t("git.invite.title");
@@ -282,29 +326,36 @@ public final class GitSync {
 			return;
 		}
 
-		// GitHub CLI does the sign in, so ModLab never handles passwords or tokens
-		if (!exec("gh", "--version").ok()) {
+		String token = githubToken();
+		if (token == null) {
 			int choice = JOptionPane.showConfirmDialog(mcreator, L10N.t("git.invite.manual", slug), title,
 					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
 			if (choice == JOptionPane.YES_OPTION)
 				DesktopUtils.browseSafe("https://github.com/" + slug + "/settings/access");
 			return;
 		}
-		if (!exec("gh", "auth", "status").ok()) {
-			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.login"), title, JOptionPane.WARNING_MESSAGE);
+
+		GitResult repository = withProgress(title, () -> github("GET", "/repos/" + slug, token, null));
+		if (repository == null || !repository.ok()) {
+			showOutput(title, explain(repository), JOptionPane.ERROR_MESSAGE);
 			return;
 		}
 
-		String visibility = exec("gh", "repo", "view", slug, "--json", "visibility", "-q", ".visibility").output()
-				.trim();
-		if ("PUBLIC".equalsIgnoreCase(visibility)) {
+		boolean isPrivate = false;
+		try {
+			isPrivate = JsonParser.parseString(repository.output()).getAsJsonObject().get("private").getAsBoolean();
+		} catch (Exception e) {
+			LOG.warn("Could not read the visibility of the repository", e);
+		}
+
+		if (!isPrivate) {
 			Object[] options = { L10N.t("git.invite.make_private"), L10N.t("git.invite.keep_public"),
 					UIManager.getString("OptionPane.cancelButtonText") };
 			int choice = JOptionPane.showOptionDialog(mcreator, L10N.t("git.invite.public", slug), title,
 					JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[0]);
 			if (choice == 0) {
-				GitResult edit = withProgress(title, () -> exec("gh", "repo", "edit", slug, "--visibility", "private",
-						"--accept-visibility-change-consequences"));
+				GitResult edit = withProgress(title,
+						() -> github("PATCH", "/repos/" + slug, token, "{\"private\":true}"));
 				if (edit == null || !edit.ok()) {
 					showOutput(title, explain(edit), JOptionPane.ERROR_MESSAGE);
 					return;
@@ -325,13 +376,59 @@ public final class GitSync {
 			return;
 		}
 
-		GitResult result = withProgress(title, () -> exec("gh", "api", "--method", "PUT",
-				"repos/" + slug + "/collaborators/" + user, "-f", "permission=push"));
+		GitResult result = withProgress(title, () -> github("PUT", "/repos/" + slug + "/collaborators/" + user, token,
+				"{\"permission\":\"push\"}"));
 		if (result != null && result.ok()) {
 			JOptionPane.showMessageDialog(mcreator, L10N.t("git.invite.done", user), title,
 					JOptionPane.INFORMATION_MESSAGE);
 		} else {
 			showOutput(title, explain(result), JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
+	/**
+	 * Asks Git for the GitHub credentials it already uses to push (Git Credential Manager). The token is only kept
+	 * in memory for the request, ModLab never stores it.
+	 *
+	 * @return the token, or null if Git has no GitHub credentials
+	 */
+	private String githubToken() {
+		GitResult credentials = exec("protocol=https\nhost=github.com\n\n", "git", "credential", "fill");
+		if (!credentials.ok())
+			return null;
+
+		for (String line : credentials.output().split("\\R")) {
+			if (line.startsWith("password=") && line.length() > "password=".length())
+				return line.substring("password=".length()).trim();
+		}
+		return null;
+	}
+
+	/**
+	 * @return a result with code 0 on success, otherwise the HTTP status code (or a negative number if the request failed)
+	 */
+	private GitResult github(String method, String path, String token, String jsonBody) {
+		try {
+			HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("https://api.github.com" + path))
+					.timeout(Duration.ofSeconds(30)).header("Authorization", "Bearer " + token)
+					.header("Accept", "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28")
+					.header("User-Agent", "ModLab/" + ModLabConfig.version());
+			if (jsonBody != null) {
+				request.header("Content-Type", "application/json")
+						.method(method, HttpRequest.BodyPublishers.ofString(jsonBody));
+			} else {
+				request.method(method, HttpRequest.BodyPublishers.noBody());
+			}
+
+			HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+			HttpResponse<String> response = client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+			int code = response.statusCode();
+			return new GitResult(code >= 200 && code < 300 ? 0 : code, response.body());
+		} catch (IOException e) {
+			return new GitResult(-2, "GitHub request failed: " + e.getMessage());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return new GitResult(-3, "Interrupted");
 		}
 	}
 
@@ -395,7 +492,9 @@ public final class GitSync {
 		String output = result.output();
 		String lower = output.toLowerCase();
 		String hint = null;
-		if (lower.contains("tell me who you are") || lower.contains("author identity unknown"))
+		if (result.code() == 401 || result.code() == 403 || result.code() == 404 || result.code() == 422)
+			hint = L10N.t("git.error.api_access");
+		else if (lower.contains("tell me who you are") || lower.contains("author identity unknown"))
 			hint = L10N.t("git.error.identity");
 		else if (lower.contains("rejected") || lower.contains("non-fast-forward") || lower.contains("fetch first"))
 			hint = L10N.t("git.error.rejected");
@@ -439,10 +538,10 @@ public final class GitSync {
 	}
 
 	private GitResult git(String... args) {
-		return exec("git", args);
+		return exec(null, "git", args);
 	}
 
-	private GitResult exec(String executable, String... args) {
+	private GitResult exec(String stdin, String executable, String... args) {
 		List<String> command = new ArrayList<>();
 		command.add(executable);
 		command.addAll(Arrays.asList(args));
@@ -450,8 +549,16 @@ public final class GitSync {
 		try {
 			ProcessBuilder builder = new ProcessBuilder(command).directory(dir).redirectErrorStream(true);
 			builder.environment().put("GIT_TERMINAL_PROMPT", "0"); // never wait for a hidden password prompt
-			builder.environment().put("GH_PROMPT_DISABLED", "1");
 			Process process = builder.start();
+
+			if (stdin != null) {
+				try (OutputStream out = process.getOutputStream()) {
+					out.write(stdin.getBytes(StandardCharsets.UTF_8));
+				} catch (IOException ignored) {
+				}
+			} else {
+				process.getOutputStream().close();
+			}
 
 			StringBuffer output = new StringBuffer();
 			Thread reader = new Thread(() -> {
